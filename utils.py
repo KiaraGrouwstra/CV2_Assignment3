@@ -4,6 +4,9 @@ import pyrender
 from pyrender import Scene, Viewer, PerspectiveCamera, DirectionalLight, PointLight, OffscreenRenderer
 from data_def import Mesh, PCAModel
 
+NUM_IDENTITY   = 30
+NUM_EXPRESSION = 20
+
 def read_pca(bfm, path, k):
     mean = np.asarray(bfm[f'{path}/mean'],        dtype=np.float32).reshape((-1, 3))     # (N, 3)
     base = np.asarray(bfm[f'{path}/pcaBasis'],    dtype=np.float32).reshape((-1, 3, k))  # (N, 3, k)
@@ -17,12 +20,29 @@ def load_data():
     identity   = read_pca(bfm, 'shape/model', 199)
     expression = read_pca(bfm, 'expression/model', 100)
     triangles = np.asarray(bfm['shape/representer/cells'], dtype=np.int32).T  # (K, 3)
+    # extract 30 PC for facial identity and 20 PC for expression
+    identity   = identity  .filter(NUM_IDENTITY)
+    expression = expression.filter(NUM_EXPRESSION)
     return (texture, identity, expression, triangles)
 
-def mesh_to_png(file_name, mesh):
+def mesh_to_png(mesh, file_name=None):
     png = mesh.trimesh().scene().save_image()
-    with open(file_name, 'wb') as f:
-        f.write(png)
+    if file_name:
+        with open(file_name, 'wb') as f:
+            f.write(png)
+    return png
+
+def reconstruct_face(identity,
+                     expression,
+                     alpha=np.random.uniform(-1.0, 1.0),
+                     delta=np.random.uniform(-1.0, 1.0)):
+    """generate a point cloud using eq. 1.
+       uniformly sample alpha and delta from -1~1.
+    """
+    geom = identity  .sample(alpha)
+    expr = expression.sample(delta)
+    G = geom + expr
+    return G
 
 # def render_mesh(mesh, h=256, w=256):
 #     """https://pyrender.readthedocs.io/en/latest/examples/quickstart.html"""
