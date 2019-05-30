@@ -48,25 +48,25 @@ def reconstruct_face(identity,
     G = geom + expr
     return G
 
-# def render_mesh(mesh, h=256, w=256):
-#     """https://pyrender.readthedocs.io/en/latest/examples/quickstart.html"""
-#     mesh = pyrender.Mesh.from_trimesh(mesh)
-#     scene = Scene()
-#     scene.add(mesh)
+def render_mesh(mesh, h=256, w=256):
+    """https://pyrender.readthedocs.io/en/latest/examples/quickstart.html"""
+    mesh = pyrender.Mesh.from_trimesh(mesh.trimesh())
+    scene = Scene()
+    scene.add(mesh)
 
-#     # z-axis away from the scene, x-axis right, y-axis up
-#     pose = np.eye(4)
-#     pose[2, 3] = 250
+    # z-axis away from the scene, x-axis right, y-axis up
+    pose = np.eye(4)
+    pose[2, 3] = 250
 
-#     # add camera
-#     camera = PerspectiveCamera(yfov=np.pi / 3.0, aspectRatio=1.0)
-#     scene.add(camera, pose=pose)
+    # add camera
+    camera = PerspectiveCamera(yfov=np.pi / 3.0, aspectRatio=1.0)
+    scene.add(camera, pose=pose)
 
-#     # add light
-#     # light = DirectionalLight(color=np.ones(3), intensity=5.0)
-#     light = PointLight(color=[1.0, 1.0, 1.0], intensity=2.0)
-#     scene.add(light, pose=pose)
+    # add light
+    # light = DirectionalLight(color=np.ones(3), intensity=5.0)
+    light = PointLight(color=[1.0, 1.0, 1.0], intensity=2.0)
+    scene.add(light, pose=pose)
 
-#     r = OffscreenRenderer(h, w)
-#     color, depth = r.render(scene)
-#     return color
+    r = OffscreenRenderer(h, w)
+    color, depth = r.render(scene)
+    return color

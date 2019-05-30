@@ -57,7 +57,7 @@ def perspective_matrix(t, b, l, r, n, f):
 def project_points(S, z, near):
     """inspiration: https://github.com/d4vidbiertmpl/Computer-Vision-2/blob/master/Assignment_3/solution.ipynb"""
     translation = (0, 0, z)
-    R[3, 0:2] = translation
+    R[3, 0:3] = translation
     P = perspective_matrix(1, -1, 1, -1, near, 100)
     p = P @ R @ S
     # make it homogeneous
