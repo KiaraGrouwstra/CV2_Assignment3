@@ -69,7 +69,10 @@ def project_points(S, z, near):
 
 
 (texture, identity, expression, triangles) = load_data()
-G = reconstruct_face(identity, expression)
+# G = reconstruct_face(identity, expression)
+alpha = np.random.uniform(-1.0, 1.0)
+delta = np.random.uniform(-1.0, 1.0)
+G = reconstruct_face(identity, expression, alpha, delta)
 (num_points, _) = G.shape
 S = np.vstack((G.T, np.ones(num_points)))
 
