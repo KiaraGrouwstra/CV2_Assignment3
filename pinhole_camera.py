@@ -82,6 +82,7 @@ for i, angle in enumerate([-10, 10]):
     img = mesh_to_png(mesh)
     plt.subplot(2, 1, i+1)
     plt.imshow(img)
+plt.savefig('pinhole_camera.png')
 
 # vertex indexes annotation are available in the provided file
 with open('Landmarks68_model2017-1_face12_nomouth.anl', 'r') as f:

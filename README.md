@@ -7,4 +7,5 @@
 pip install -r requirements.txt
 python mesh_to_png.py
 python morphable_model.py
+python pinhole_camera.py
 ```

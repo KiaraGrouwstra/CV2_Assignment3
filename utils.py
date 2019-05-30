@@ -3,6 +3,8 @@ import numpy as np
 import pyrender
 from pyrender import Scene, Viewer, PerspectiveCamera, DirectionalLight, PointLight, OffscreenRenderer
 from data_def import Mesh, PCAModel
+import tempfile
+import matplotlib.image as mpimg
 
 NUM_IDENTITY   = 30
 NUM_EXPRESSION = 20
@@ -27,10 +29,12 @@ def load_data():
 
 def mesh_to_png(mesh, file_name=None):
     png = mesh.trimesh().scene().save_image()
-    if file_name:
-        with open(file_name, 'wb') as f:
-            f.write(png)
-    return png
+    if not file_name:
+        file_name = tempfile.mktemp()
+    with open(file_name, 'wb') as f:
+        f.write(png)
+    img = mpimg.imread(file_name)
+    return img
 
 def reconstruct_face(identity,
                      expression,

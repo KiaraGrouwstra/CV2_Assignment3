@@ -20,6 +20,7 @@ def main(args):
         img = mesh_to_png(mesh)
         plt.subplot(rows, cols, i+1)
         plt.imshow(img)
+    plt.savefig('morphable_model.png')
 
 
 if __name__ == "__main__":
