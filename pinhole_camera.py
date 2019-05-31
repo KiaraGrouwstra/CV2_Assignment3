@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from data_def import Mesh
 from utils import load_data, mesh_to_png, reconstruct_face
 from pdb import set_trace
+import itertools
+from mpl_toolkits.mplot3d import Axes3D
 
 # - Section 3, Equation 2: [\hat{x}, \hat{y}, \hat{z}, \hat{d}] are homogeneous coordinates obtained after projection. You can remove homogeneous coordinate by dividing by \hat{d} and get u, v and depth respectively. You can check SfM lecture for more details about camera projections.
 # - To convert homogeneous coordinate back to obtain u,v coordinates you just need to divide by a homogeneous coordinate, no division by depth is required.
@@ -68,13 +70,17 @@ def project_points(S, z, near):
     translation = (0, 0, z)
     R[3, 0:3] = translation
     P = perspective_matrix(1, -1, 1, -1, near, 100)
-    p = P @ R @ S
-    # make it homogeneous
-    # TODO: H and W from the viewport matrix are not estimated from the point cloud. They are input image height and width.
+    ones = np.ones((S.shape[0], 1))
+    S = np.append(S, ones, axis=1)
     V = viewport_matrix()
-    p = p / p[3, :]
-    p = V @ p
-    p = p[:2, :]
+    # print(P, R, S.shape)
+    p = V @ P @ R @ S.T
+
+    # make it homogeneous
+    # p = p / p[3, :]
+    # p = V @ p
+    # p = p[:2, :]
+    # print(p.shape)
     return p.T
 
 
@@ -103,9 +109,32 @@ with open('Landmarks68_model2017-1_face12_nomouth.anl', 'r') as f:
 vertex_idxs = list(map(int, lines))
 
 # visualize facial landmark points on the 2D image plane using Eq. 2
-fig = plt.figure()
-plt.imshow(img)
+plt.close("all")
+
+# fig = plt.figure()
+# plt.imshow(img)
 points_ = project_points(G_, z=-200, near=1)
+print(points_.shape)
+print(G_.shape)
+points_[:, 0] -= points_[:, 0].min()
+points_[:, 1] -= points_[:, 1].min()
+count = 0
+lsdsd = []
+asdasd = []
 for i, pair in enumerate(points_):
-    plt.annotate(str(i), pair)
+    if i not in vertex_idxs:
+        continue
+    # print((pair[0], pair[1]), count)
+    # plt.annotate(str(count), (pair[0], pair[1]))
+    asdasd.append(G_[i][:2])
+    lsdsd.append(pair[:2])
+    count += 1
+# ax = Axes3D(fig)
+asdasd = np.array(asdasd)
+lsdsd = np.array(lsdsd)
+
+plt.scatter(lsdsd[:, 0], lsdsd[:, 1])
+plt.scatter(asdasd[:, 0], asdasd[:, 1])
+# plt.scatter(points_[:, 0], points_[:, 1])
+# ax.scatter(points_[:, 0], points_[:, 1], points_[:, 2])
 plt.show()
