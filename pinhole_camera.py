@@ -63,10 +63,22 @@ def perspective_matrix(t, b, l, r, n, f):
     P[2, 2] = -(f + n) / (f - n)
     P[2, 3] = -1
     P[3, 2] = 2 * f * n / (f - n)
+
+    ####################################################################
+    # FIXME P[3, 2] should be *-1, right?
+    ####################################################################
+
     return P
 
 def project_points(S, z, near):
     """inspiration: https://github.com/d4vidbiertmpl/Computer-Vision-2/blob/master/Assignment_3/solution.ipynb"""
+
+    ####################################################################
+    # FIXME I think P and V should be transposed since we're using column mayor?
+    #   (by doing transpose)
+    # FIXME R is not defined in the function
+    ####################################################################
+
     translation = (0, 0, z)
     R[3, 0:3] = translation
     P = perspective_matrix(1, -1, 1, -1, near, 100)
@@ -92,6 +104,11 @@ G = reconstruct_face(identity, expression, alpha, delta)
 (num_points, _) = G.shape
 S = np.vstack((G.T, np.ones(num_points)))
 
+########################################################################
+# TODO use P and V also when only doing the rotation
+#   should work correctly when dividing by z-coordinate?
+########################################################################
+
 fig = plt.figure()
 # Rotate an object 10° and -10° around Oy and visualize result.
 for i, angle in enumerate([-10, 10]):
@@ -109,7 +126,7 @@ with open('Landmarks68_model2017-1_face12_nomouth.anl', 'r') as f:
 vertex_idxs = list(map(int, lines))
 
 # visualize facial landmark points on the 2D image plane using Eq. 2
-plt.close("all")
+#plt.close("all")
 
 points_ = project_points(G_, z=-200, near=1)
 projections = []
@@ -125,6 +142,7 @@ projections = np.array(projections)
 
 numbers = [str(x) for x in range(len(originals))]
 
+fig = plt.figure()
 plt.scatter(projections[:, 0], projections[:, 1])
 for i in range(len(originals)):
     plt.text(projections[i, 0], projections[i, 1], numbers[i], fontsize=7)
