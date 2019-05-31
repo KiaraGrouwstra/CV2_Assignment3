@@ -50,15 +50,17 @@ def rescale_landmarks(landmarks):
         difference = landmarks[:, i].max() - landmarks[:, i].min()
         landmarks[:, i] = landmarks[:, i] - landmarks[:, i].mean()
         landmarks[:, i] = landmarks[:, i] / difference
-
     return landmarks
 
+def plot_landmarks(data):
+    """Visualize predicted landmarks overlayed on ground truth"""
+    for i in range(len(data)):
+        data[i] = rescale_landmarks(data[i])
+        # data[0] = np.flip(data[0], 1)
+        plt.scatter(data[i][:, 0], data[i][:, 1])
+    plt.show()
 
-if __name__ == "__main__":
-    # Take a single picture of yourself or pick random one from the web.
-    # Extract ground truth landmarks using Dlib (http://dlib.net/face_landmark_detection.py.html).
-    # Keep face closer to the frontal and neutral for now.
-
+def files_landmarks():
     # TODO: convert to memoized function
     pickled_file = Path("landmarks.pkl")
     if not pickled_file.exists():
@@ -71,10 +73,12 @@ if __name__ == "__main__":
         file_stream = open(pickled_file, 'rb')
         data = pickle.load(file_stream)
         print(f'Loaded data \'{pickled_file}\'.')
+    return data
 
-    # Visualize results using pinhole_camera
-    for i in range(len(data)):
-        data[i] = rescale_landmarks(data[i])
-        # data[0] = np.flip(data[0], 1)
-        plt.scatter(data[i][:, 0], data[i][:, 1])
-    plt.show()
+if __name__ == "__main__":
+    # Take a single picture of yourself or pick random one from the web.
+    # Extract ground truth landmarks using Dlib (http://dlib.net/face_landmark_detection.py.html).
+    # Keep face closer to the frontal and neutral for now.
+    data = files_landmarks()
+    plot_landmarks(data)
+    plt.savefig('landmarks.png')

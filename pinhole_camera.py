@@ -62,30 +62,17 @@ def perspective_matrix(t, b, l, r, n, f):
     P[2, 1] = (t + b) / h
     P[2, 2] = -(f + n) / (f - n)
     P[2, 3] = -1
-    P[3, 2] = 2 * f * n / (f - n)
-
-    ####################################################################
-    # FIXME P[3, 2] should be *-1, right?
-    ####################################################################
-
+    P[3, 2] = -2 * f * n / (f - n)
     return P
 
 
-def project_points(S, near, translation):
+def project_points(S, near, R):
     """project points following equation 2"""
-
-    ####################################################################
-    # FIXME I think P and V should be transposed since we're using column mayor?
-    #   (by doing transpose)
-    # FIXME R is not defined in the function
-    ####################################################################
-
-    R[3, 0:3] = translation
     P = perspective_matrix(1, -1, 1, -1, near, 100)
     ones = np.ones((S.shape[0], 1))
     S = np.append(S, ones, axis=1)
     V = viewport_matrix()
-    p = V @ P @ R @ S.T
+    p = V.T @ P.T @ R @ S.T
     return p.T
 
 
@@ -120,7 +107,8 @@ vertex_idxs = load_landmarks()
 #plt.close("all")
 
 translation = (0, 0, -200)
-points_ = project_points(G_, near=1, translation=translation)
+R[3, 0:3] = translation
+points_ = project_points(G_, near=1, R=R)
 projections = []
 originals = []
 for i, pair in enumerate(points_):
