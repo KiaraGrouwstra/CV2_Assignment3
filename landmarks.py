@@ -3,6 +3,8 @@ import os
 import dlib
 import glob
 import numpy as np
+import pickle
+from tqdm import tqdm
 
 def shape_to_np(shape, dtype="int"):
     # initialize the list of (x, y)-coordinates
@@ -33,6 +35,11 @@ def detect_landmark(img):
         # Draw the face landmarks on the screen.
         return shape_to_np(shape)
 
+def file_landmarks(f):
+    print("Processing file: {}".format(f))
+    img = dlib.load_rgb_image(f)
+    landmarks = detect_landmark(img)
+    return landmarks
 
 if __name__ == "__main__":
     # Take a single picture of yourself or pick random one from the web.
@@ -40,9 +47,10 @@ if __name__ == "__main__":
     # Keep face closer to the frontal and neutral for now.
     faces_folder_path = 'pics'
     files = glob.glob(os.path.join(faces_folder_path, "*.jpg"))
-    for f in files:
-        print("Processing file: {}".format(f))
-        img = dlib.load_rgb_image(f)
-        landmark = detect_landmark(img)
-        print(landmark)
-        # TODO: Visualize results using pinhole_camera
+    # for f in files:
+    #     landmarks = file_landmarks(f)
+    #     print(landmarks)
+    #     # TODO: Visualize results using pinhole_camera
+    landmarks_pics = list(map(file_landmarks, tqdm(files)))
+    with open('landmarks.pkl', 'wb') as f:
+        pickle.dump(landmarks_pics, f)
