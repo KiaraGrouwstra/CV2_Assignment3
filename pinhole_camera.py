@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from data_def import Mesh
-from utils import load_data, mesh_to_png, reconstruct_face
+from utils import load_data, mesh_to_png, reconstruct_face, load_landmarks
 from pdb import set_trace
 import itertools
 from mpl_toolkits.mplot3d import Axes3D
@@ -65,22 +65,14 @@ def perspective_matrix(t, b, l, r, n, f):
     P[3, 2] = 2 * f * n / (f - n)
     return P
 
-def project_points(S, z, near):
-    """inspiration: https://github.com/d4vidbiertmpl/Computer-Vision-2/blob/master/Assignment_3/solution.ipynb"""
-    translation = (0, 0, z)
+def project_points(S, near, translation):
+    """project points following equation 2"""
     R[3, 0:3] = translation
     P = perspective_matrix(1, -1, 1, -1, near, 100)
     ones = np.ones((S.shape[0], 1))
     S = np.append(S, ones, axis=1)
     V = viewport_matrix()
-    # print(P, R, S.shape)
     p = V @ P @ R @ S.T
-
-    # make it homogeneous
-    # p = p / p[3, :]
-    # p = V @ p
-    # p = p[:2, :]
-    # print(p.shape)
     return p.T
 
 
@@ -90,6 +82,7 @@ alpha = np.random.uniform(-1.0, 1.0)
 delta = np.random.uniform(-1.0, 1.0)
 G = reconstruct_face(identity, expression, alpha, delta)
 (num_points, _) = G.shape
+# make coordinates homogeneous
 S = np.vstack((G.T, np.ones(num_points)))
 
 fig = plt.figure()
@@ -103,15 +96,13 @@ for i, angle in enumerate([-10, 10]):
     plt.imshow(img)
 plt.savefig('pinhole_camera.png')
 
-# vertex indexes annotation are available in the provided file
-with open('Landmarks68_model2017-1_face12_nomouth.anl', 'r') as f:
-    lines = f.read().splitlines()
-vertex_idxs = list(map(int, lines))
+vertex_idxs = load_landmarks()
 
 # visualize facial landmark points on the 2D image plane using Eq. 2
 plt.close("all")
 
-points_ = project_points(G_, z=-200, near=1)
+translation = (0, 0, -200)
+points_ = project_points(G_, near=1, translation=translation)
 projections = []
 originals = []
 for i, pair in enumerate(points_):
