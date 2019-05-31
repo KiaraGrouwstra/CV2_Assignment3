@@ -111,30 +111,25 @@ vertex_idxs = list(map(int, lines))
 # visualize facial landmark points on the 2D image plane using Eq. 2
 plt.close("all")
 
-# fig = plt.figure()
-# plt.imshow(img)
 points_ = project_points(G_, z=-200, near=1)
-print(points_.shape)
-print(G_.shape)
-points_[:, 0] -= points_[:, 0].min()
-points_[:, 1] -= points_[:, 1].min()
-count = 0
-lsdsd = []
-asdasd = []
+projections = []
+originals = []
 for i, pair in enumerate(points_):
     if i not in vertex_idxs:
         continue
-    # print((pair[0], pair[1]), count)
-    # plt.annotate(str(count), (pair[0], pair[1]))
-    asdasd.append(G_[i][:2])
-    lsdsd.append(pair[:2])
-    count += 1
-# ax = Axes3D(fig)
-asdasd = np.array(asdasd)
-lsdsd = np.array(lsdsd)
+    originals.append(G_[i][:2])
+    projections.append(pair[:2])
 
-plt.scatter(lsdsd[:, 0], lsdsd[:, 1])
-plt.scatter(asdasd[:, 0], asdasd[:, 1])
-# plt.scatter(points_[:, 0], points_[:, 1])
-# ax.scatter(points_[:, 0], points_[:, 1], points_[:, 2])
+originals = np.array(originals)
+projections = np.array(projections)
+
+numbers = [str(x) for x in range(len(originals))]
+
+plt.scatter(projections[:, 0], projections[:, 1])
+for i in range(len(originals)):
+    plt.text(projections[i, 0], projections[i, 1], numbers[i], fontsize=7)
+
+plt.scatter(originals[:, 0], originals[:, 1])
+for i in range(len(originals)):
+    plt.text(originals[i, 0], originals[i, 1], numbers[i], fontsize=7)
 plt.show()
