@@ -100,7 +100,7 @@ S = np.vstack((G.T, np.ones(num_points)))
 
 ########################################################################
 # TODO use P and V also when only doing the rotation
-#   should work correctly when dividing by z-coordinate?
+#   should work correctly when dividing by w-coordinate (fourth one)?
 ########################################################################
 
 fig = plt.figure()
