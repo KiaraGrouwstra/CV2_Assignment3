@@ -1,0 +1,10 @@
+name: cv2
+channels:
+- defaults
+- conda-forge
+dependencies:
+- h5py
+- python
+- scikit-image
+- shapely
+- trimesh
