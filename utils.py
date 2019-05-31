@@ -4,6 +4,7 @@ import pyrender
 from pyrender import Scene, Viewer, PerspectiveCamera, DirectionalLight, PointLight, OffscreenRenderer
 import tempfile
 import matplotlib.image as mpimg
+import trimesh
 
 from data_def import Mesh, PCAModel
 
@@ -36,6 +37,43 @@ def mesh_to_png(mesh, file_name=None):
         f.write(png)
     img = mpimg.imread(file_name)
     return img
+
+# def mesh_to_png(mesh, file_name=None, width=640, height=480, z_camera_translation=400):
+#     # png = mesh.trimesh().scene().save_image()
+
+#     mesh = trimesh.base.Trimesh(
+#         vertices=mesh.vertices,
+#         faces=mesh.triangles,
+#         vertex_colors=mesh.colors)
+
+#     mesh = pyrender.Mesh.from_trimesh(mesh, smooth=True, wireframe=False)
+
+#     # compose scene
+#     scene = pyrender.Scene(ambient_light=np.array([1.7, 1.7, 1.7, 1.0]), bg_color=[255, 255, 255])
+#     camera = pyrender.PerspectiveCamera( yfov=np.pi / 3.0)
+#     light = pyrender.DirectionalLight(color=[1,1,1], intensity=2e3)
+
+#     scene.add(mesh, pose=np.eye(4))
+#     scene.add(light, pose=np.eye(4))
+
+#     # Added camera translated z_camera_translation in the 0z direction w.r.t. the origin
+#     scene.add(camera, pose=[[ 1,  0,  0,  0],
+#                             [ 0,  1,  0,  0],
+#                             [ 0,  0,  1,  z_camera_translation],
+#                             [ 0,  0,  0,  1]])
+
+#     # render scene
+#     r = pyrender.OffscreenRenderer(width, height)
+#     color, _ = r.render(scene)
+
+#     # imsave(file_name, color)
+#     if not file_name:
+#         file_name = tempfile.mktemp()
+#     # with open(file_name, 'wb') as f:
+#     #     f.write(png)
+#     imsave(file_name, color)
+#     img = mpimg.imread(file_name)
+#     return img
 
 def reconstruct_face(identity,
                      expression,
