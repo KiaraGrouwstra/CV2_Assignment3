@@ -35,10 +35,14 @@ def detect_landmark(img):
 
 
 if __name__ == "__main__":
-    faces_folder_path = sys.argv[1]
+    # Take a single picture of yourself or pick random one from the web.
+    # Extract ground truth landmarks using Dlib (http://dlib.net/face_landmark_detection.py.html).
+    # Keep face closer to the frontal and neutral for now.
+    faces_folder_path = 'pics'
     files = glob.glob(os.path.join(faces_folder_path, "*.jpg"))
     for f in files:
         print("Processing file: {}".format(f))
         img = dlib.load_rgb_image(f)
         landmark = detect_landmark(img)
         print(landmark)
+        # TODO: Visualize results using pinhole_camera
