@@ -9,3 +9,4 @@ shapely
 h5py
 dlib
 torch
+tqdm

@@ -29,6 +29,13 @@ def load_data():
     expression = expression.filter(NUM_EXPRESSION)
     return (texture, identity, expression, triangles)
 
+def load_landmarks():
+    """vertex indexes annotation are available in the provided file"""
+    with open('Landmarks68_model2017-1_face12_nomouth.anl', 'r') as f:
+        lines = f.read().splitlines()
+    vertex_idxs = list(map(int, lines))
+    return vertex_idxs
+
 def mesh_to_png(mesh, file_name=None):
     png = mesh.trimesh().scene().save_image()
     if not file_name:
