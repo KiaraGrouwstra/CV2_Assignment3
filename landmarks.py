@@ -32,3 +32,13 @@ def detect_landmark(img):
         shape = predictor(img, d)
         # Draw the face landmarks on the screen.
         return shape_to_np(shape)
+
+
+if __name__ == "__main__":
+    faces_folder_path = sys.argv[1]
+    files = glob.glob(os.path.join(faces_folder_path, "*.jpg"))
+    for f in files:
+        print("Processing file: {}".format(f))
+        img = dlib.load_rgb_image(f)
+        landmark = detect_landmark(img)
+        print(landmark)
