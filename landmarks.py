@@ -5,6 +5,8 @@ import glob
 import numpy as np
 import pickle
 from tqdm import tqdm
+from pathlib import Path
+import matplotlib.pyplot as plt
 
 def shape_to_np(shape, dtype="int"):
     # initialize the list of (x, y)-coordinates
@@ -41,16 +43,42 @@ def file_landmarks(f):
     landmarks = detect_landmark(img)
     return landmarks
 
+def rescale_landmarks(landmarks):
+    landmarks = landmarks.astype(float)
+    for i in [0, 1]:
+        landmarks[:, i] = landmarks[:, i]
+        difference = landmarks[:, i].max() - landmarks[:, i].min()
+        landmarks[:, i] = landmarks[:, i] - landmarks[:, i].mean()
+        landmarks[:, i] = landmarks[:, i] / difference
+
+    return landmarks
+
+
 if __name__ == "__main__":
     # Take a single picture of yourself or pick random one from the web.
     # Extract ground truth landmarks using Dlib (http://dlib.net/face_landmark_detection.py.html).
     # Keep face closer to the frontal and neutral for now.
-    faces_folder_path = 'pics'
-    files = glob.glob(os.path.join(faces_folder_path, "*.jpg"))
-    # for f in files:
-    #     landmarks = file_landmarks(f)
-    #     print(landmarks)
-    #     # TODO: Visualize results using pinhole_camera
-    landmarks_pics = list(map(file_landmarks, tqdm(files)))
-    with open('landmarks.pkl', 'wb') as f:
-        pickle.dump(landmarks_pics, f)
+    pickled_file = Path("landmarks.pkl")
+    if not pickled_file.exists():
+        faces_folder_path = 'pics'
+        files = glob.glob(os.path.join(faces_folder_path, "*.jpg"))
+        # for f in files:
+        #     landmarks = file_landmarks(f)
+        #     print(landmarks)
+        #     # TODO: Visualize results using pinhole_camera
+        landmarks_pics = list(map(file_landmarks, tqdm(files)))
+        with open('landmarks.pkl', 'wb') as f:
+            pickle.dump(landmarks_pics, f)
+    else:
+        file_stream = open(pickled_file, 'rb')
+        data = pickle.load(file_stream)
+        print(f'Loaded data \'{pickled_file}\'.')
+
+        for i in range(len(data)):
+            data[i] = rescale_landmarks(data[i])
+            # data[0] = np.flip(data[0], 1)
+            plt.scatter(data[i][:, 0], data[i][:, 1])
+        plt.show()
+        with open('landmarks.pkl', 'wb') as f:
+            pickle.dump(data, f)
+
