@@ -2,9 +2,10 @@ import h5py
 import numpy as np
 import pyrender
 from pyrender import Scene, Viewer, PerspectiveCamera, DirectionalLight, PointLight, OffscreenRenderer
-from data_def import Mesh, PCAModel
 import tempfile
 import matplotlib.image as mpimg
+
+from data_def import Mesh, PCAModel
 
 NUM_IDENTITY   = 30
 NUM_EXPRESSION = 20

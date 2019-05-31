@@ -4,6 +4,11 @@ from data_def import Mesh
 from utils import load_data, mesh_to_png, reconstruct_face
 from pdb import set_trace
 
+# - Section 3, Equation 2: [\hat{x}, \hat{y}, \hat{z}, \hat{d}] are homogeneous coordinates obtained after projection. You can remove homogeneous coordinate by dividing by \hat{d} and get u, v and depth respectively. You can check SfM lecture for more details about camera projections.
+# - To convert homogeneous coordinate back to obtain u,v coordinates you just need to divide by a homogeneous coordinate, no division by depth is required.
+# - Section 3: Your camera origin is at (0, 0, 0), camera view direction is (0, 0, -1). Consequently, 3D model is initially behind the camera, therefore remember to shift an object using z translation from section 4.
+# - For projection matrix you can set principal point to be in the center of an image {W/2, H/2} and fovy to be 0.5.
+
 def rotation_matrix_y(y_deg):
     """Get the Y rotation matrix (https://bit.ly/2PQ8glW) for a given rotation angle (in degrees).
        Assuming object translation to be 0.
@@ -17,20 +22,22 @@ def rotation_matrix_y(y_deg):
     return R
 
 
-def viewport_matrix(v_l=-1, v_r=1, v_t=1, v_b=-1):
+def viewport_matrix(l=-1, r=1, t=1, b=-1):
     """
     viewport matrix: http://glasnost.itcarlow.ie/~powerk/GeneralGraphicsNotes/projection/viewport_transformation.html
-    @param v_l: X
-    @param v_r: Y
-    @param v_t: Z
-    @param v_b: ?
+    @param l: left
+    @param r: right
+    @param t: top
+    @param b: bottom
     """
     V = np.eye(4)
-    V[0, 0] = .5 * (v_r - v_l)
-    V[1, 1] = .5 * (v_t - v_b)
+    w = r - l
+    h = t - b
+    V[0, 0] = .5 * w
+    V[1, 1] = .5 * h
     V[2, 2] = .5
-    V[3, 0] = .5 * (v_r + v_l)
-    V[3, 1] = .5 * (v_t + v_b)
+    V[3, 0] = .5 * (r + l)
+    V[3, 1] = .5 * (t + b)
     V[3, 2] = .5
     return V
 
@@ -45,10 +52,12 @@ def perspective_matrix(t, b, l, r, n, f):
     @param f: far
     """
     P = np.zeros((4, 4))
-    P[0, 0] = 2 * n / (r - l)
-    P[1, 1] = 2 * n / (t - b)
-    P[2, 0] = (r + l) / (r - l)
-    P[2, 1] = (t + b) / (t - b)
+    w = r - l
+    h = t - b
+    P[0, 0] = 2 * n / w
+    P[1, 1] = 2 * n / h
+    P[2, 0] = (r + l) / w
+    P[2, 1] = (t + b) / h
     P[2, 2] = -(f + n) / (f - n)
     P[2, 3] = -1
     P[3, 2] = 2 * f * n / (f - n)
@@ -61,6 +70,7 @@ def project_points(S, z, near):
     P = perspective_matrix(1, -1, 1, -1, near, 100)
     p = P @ R @ S
     # make it homogeneous
+    # TODO: H and W from the viewport matrix are not estimated from the point cloud. They are input image height and width.
     V = viewport_matrix()
     p = p / p[3, :]
     p = V @ p
