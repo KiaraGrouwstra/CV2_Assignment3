@@ -89,7 +89,7 @@ def project_face(G, omega, t):
 
 class Model(nn.Module):
 
-    def __init__(self, ground_truth, identity, expression, lambda_alpha=0.5, lambda_delta=0.5):
+    def __init__(self, ground_truth, identity, expression, alpha=None, lambda_alpha=0.5, lambda_delta=0.5):
         super(Model, self).__init__()
         (n, _, _) = ground_truth.shape
         self.n = n
@@ -107,10 +107,10 @@ class Model(nn.Module):
         # weight parameters
         # initializing transformation parameters ω and t closer to the solution may help with convergence. For example translation over z dimension can be set to be -400 in the case of projection matrix with principal point {W2, H2} and fovy = 0.5.
         # TODO: give np.random.uniform dimensions everywhere else as well?
-        self.alpha =    nn.Parameter(torch.tensor(np.random.uniform(-1.0, 1.0, 30)).float())
-        self.delta =    nn.Parameter(torch.tensor(np.random.uniform(-1.0, 1.0, (n, 20))).float())
-        self.omega =    nn.Parameter(torch.tensor(np.random.uniform(0.0, 10.0, n)))
-        self.t =        nn.Parameter(torch.cat((
+        self.alpha = alpha or nn.Parameter(torch.tensor(np.random.uniform(-1.0, 1.0, 30)).float())
+        self.delta =          nn.Parameter(torch.tensor(np.random.uniform(-1.0, 1.0, (n, 20))).float())
+        self.omega =          nn.Parameter(torch.tensor(np.random.uniform(0.0, 10.0, n)))
+        self.t =              nn.Parameter(torch.cat((
             # x/y
             torch.tensor(np.random.uniform(-1.0, 1.0, (2, n))),
             # z
@@ -142,16 +142,9 @@ class Model(nn.Module):
             L_fits[i] = L_fit
         return L_fits.mean()
 
-def estimate_points(files, identity, expression):
-    # landmarks = file_landmarks(f)
-    landmarks_pics = torch.stack(list(map(lambda f: torch.tensor(file_landmarks(f)), files)))
-    # (n, m, xy)
-    # print(landmarks)
-
+def train_model(model):
     lr = 0.1
-    model = Model(landmarks_pics, identity, expression)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
     # - Assuming α, δ, ω, t to be latent parameters of your model optimize an Energy described above using Adam optimizer until convergence.
     for i in trange(100):
         optimizer.zero_grad()
@@ -159,12 +152,19 @@ def estimate_points(files, identity, expression):
         print(i, loss)
         loss.backward()
         optimizer.step()
+    return model
 
-    print(model)
+def estimate_points(files, identity, expression):
+    # landmarks = file_landmarks(f)
+    landmarks_pics = torch.stack(list(map(lambda f: torch.tensor(file_landmarks(f)), files)))
+    # (n, m, xy)
+    # print(landmarks)
+    model = Model(landmarks_pics, identity, expression)
+    model = train_model(model)
+    # print(model)
     return model.points.detach().numpy()
 
-
-if __name__ == "__main__":
+def load_morphace():
     # - Landmarks are a subset of vertices from the morphable model (indexes are defined by the annotation file provided), that's why you are inferring landmarks.
     # load data, filter to 68 landmarks
     # TODO: does this clash with the 30/20 filter?
@@ -173,6 +173,10 @@ if __name__ == "__main__":
     for pca in (identity, expression, texture):
         pca.mean = pca.mean[vertex_idxs]
         pca.pc   = pca.pc  [vertex_idxs]
+    return (texture, identity, expression, triangles)
+
+if __name__ == "__main__":
+    (texture, identity, expression, triangles) = load_morphace()
 
     # get pic landmarks
     faces_folder_path = 'pics'

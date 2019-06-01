@@ -29,20 +29,22 @@ def detect_landmark(img):
     # will make everything bigger and allow us to detect more faces.
     dets = detector(img, 1)
     # print("Number of faces detected: {}".format(len(dets)))
+
     for k, d in enumerate(dets):
         # print("Detection {}: Left: {} Top: {} Right: {} Bottom: {}".format(
         #     k, d.left(), d.top(), d.right(), d.bottom()))
         # Get the landmarks/parts for the face in box d.
         shape = predictor(img, d)
         # Draw the face landmarks on the screen.
-        return shape_to_np(shape)
+        # apparently all landmarks displayed in reverse (over both axes) in our images, so flip them!
+        return -1 * shape_to_np(shape)
+
+    return np.array([])
 
 def file_landmarks(f):
     print("Processing file: {}".format(f))
     img = dlib.load_rgb_image(f)
     landmarks = detect_landmark(img)
-    # apparently all landmarks displayed in reverse (over both axes) in our images!
-    landmarks *= -1
     return landmarks
 
 def rescale_landmarks(landmarks):

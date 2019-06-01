@@ -10,3 +10,4 @@ h5py
 dlib
 torch
 tqdm
+opencv-python
