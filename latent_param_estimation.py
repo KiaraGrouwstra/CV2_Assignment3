@@ -12,10 +12,6 @@ from torch.autograd import Variable
 
 from landmarks import file_landmarks, plot_landmarks
 from utils import load_data, load_landmarks, reconstruct_face
-# from pinhole_camera import rotation_matrix_y, viewport_matrix, perspective_matrix, project_points
-
-# from utils import reconstruct_face
-# from pinhole_camera import rotation_matrix_y, viewport_matrix, perspective_matrix, project_points
 
 def rotation_matrix_y(y_deg):
     """Get the Y rotation matrix (https://bit.ly/2PQ8glW) for a given rotation angle (in degrees).
@@ -27,7 +23,7 @@ def rotation_matrix_y(y_deg):
         [0., 1., 0., 0.],
         [-torch.sin(y_rad), 0., torch.cos(y_rad), 0.],
         [0., 0., 0., 1.],
-    ])
+    ]).float()
     return R
 
 
@@ -87,7 +83,7 @@ def project_face(G, omega, t):
     R = rotation_matrix_y(omega)
     G_ = (R @ S)[:3].t()
     # R[3, 0:3] = t
-    R = torch.cat((R[:3], torch.cat((t, torch.tensor([1.]))).float().unsqueeze(dim=-1).t()))
+    R = torch.cat((R[:3], torch.cat((t.float(), torch.tensor([1.]))).float().unsqueeze(dim=-1).t()))
     points = project_points(G_, near=1, R=R)
     return points
 
@@ -95,9 +91,11 @@ class Model(nn.Module):
 
     def __init__(self, ground_truth, identity, expression, lambda_alpha=0.5, lambda_delta=0.5):
         super(Model, self).__init__()
+        (n, _, _) = ground_truth.shape
+        self.n = n
 
         # data
-        self.ground_truth = torch.tensor(ground_truth).float()
+        self.ground_truth = ground_truth.float()
         self.identity = identity
         self.expression = expression
 
@@ -110,10 +108,14 @@ class Model(nn.Module):
         # initializing transformation parameters ω and t closer to the solution may help with convergence. For example translation over z dimension can be set to be -400 in the case of projection matrix with principal point {W2, H2} and fovy = 0.5.
         # TODO: give np.random.uniform dimensions everywhere else as well?
         self.alpha =    nn.Parameter(torch.tensor(np.random.uniform(-1.0, 1.0, 30)).float())
-        self.delta =    nn.Parameter(torch.tensor(np.random.uniform(-1.0, 1.0, 20)).float())
-        self.omega =    nn.Parameter(torch.tensor(np.random.uniform(0.0, 10.0)))
-        translation = (*np.random.uniform(-1.0, 1.0, 2), np.random.uniform(-400.0, 100.0))
-        self.t =        nn.Parameter(torch.tensor(translation))
+        self.delta =    nn.Parameter(torch.tensor(np.random.uniform(-1.0, 1.0, (n, 20))).float())
+        self.omega =    nn.Parameter(torch.tensor(np.random.uniform(0.0, 10.0, n)))
+        self.t =        nn.Parameter(torch.cat((
+            # x/y
+            torch.tensor(np.random.uniform(-1.0, 1.0, (2, n))),
+            # z
+            torch.tensor(np.random.uniform(-400.0, 100.0, (1, n))),
+        )))
 
     # , ground_truth, identity, expression, alpha, delta, omega, t
     def forward(self):
@@ -123,24 +125,31 @@ class Model(nn.Module):
 
         # geom = self.identity  .sample(self.alpha)
         geom = torch.tensor(self.identity.mean) + torch.tensor(self.identity.pc) @ (self.alpha * torch.sqrt(torch.tensor(self.identity.std)))
-        # expr = self.expression.sample(self.delta)
-        expr = torch.tensor(self.expression.mean) + torch.tensor(self.expression.pc) @ (self.delta * torch.sqrt(torch.tensor(self.expression.std)))
-        self.G = geom + expr
 
-        self.points = project_face(self.G, self.omega, self.t)
-        # Given 68 ground truth facial landmarks the following energy can be optimized: Lfit=Llan+Lreg(3)Llan=68∑j=1∥∥pkibj−lj∥∥22(4)where pkj is a 2D projection of a landmark point kj from Landmarks68_model2017-1_face12_nomouth.anl and lj is its ground truth 2D coordinate.
-        L_lan = (self.points[:, 0:2] - self.ground_truth).norm().pow(2).sum()
-        # We regularize the model using Tikhonov regularization to enforce the model to predict faces closer to the mean: Lreg=λalpha30∑i=1α2i+λdelta20∑i=1δ2i(5)
-        L_reg = (self.lambda_alpha * self.alpha).pow(2).sum() + (self.lambda_delta * self.delta).pow(2).sum()
-        L_fit = L_lan + L_reg
-        return L_fit
+        L_fits = torch.zeros(self.n)
+        self.points = torch.zeros(self.n, 68, 4)
+        for i in range(self.n):
+            # expr = self.expression.sample(self.delta)
+            expr = torch.tensor(self.expression.mean) + torch.tensor(self.expression.pc) @ (self.delta[i] * torch.sqrt(torch.tensor(self.expression.std)))
+            G = geom + expr
 
-def estimate_points(f, identity, expression):
-    landmarks = file_landmarks(f)
+            self.points[i] = project_face(G, self.omega[i], self.t[:, i])
+            # Given 68 ground truth facial landmarks the following energy can be optimized: Lfit=Llan+Lreg(3)Llan=68∑j=1∥∥pkibj−lj∥∥22(4)where pkj is a 2D projection of a landmark point kj from Landmarks68_model2017-1_face12_nomouth.anl and lj is its ground truth 2D coordinate.
+            L_lan = (self.points[i, :, 0:2] - self.ground_truth[i]).norm().pow(2).sum()
+            # We regularize the model using Tikhonov regularization to enforce the model to predict faces closer to the mean: Lreg=λalpha30∑i=1α2i+λdelta20∑i=1δ2i(5)
+            L_reg = (self.lambda_alpha * self.alpha).pow(2).sum() + (self.lambda_delta * self.delta[i]).pow(2).sum()
+            L_fit = L_lan + L_reg
+            L_fits[i] = L_fit
+        return L_fits.mean()
+
+def estimate_points(files, identity, expression):
+    # landmarks = file_landmarks(f)
+    landmarks_pics = torch.stack(list(map(lambda f: torch.tensor(file_landmarks(f)), files)))
+    # (n, m, xy)
     # print(landmarks)
 
     lr = 0.1
-    model = Model(landmarks, identity, expression)
+    model = Model(landmarks_pics, identity, expression)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # - Assuming α, δ, ω, t to be latent parameters of your model optimize an Energy described above using Adam optimizer until convergence.
@@ -156,8 +165,6 @@ def estimate_points(f, identity, expression):
 
 
 if __name__ == "__main__":
-    torch.autograd.set_detect_anomaly(True)
-
     # - Landmarks are a subset of vertices from the morphable model (indexes are defined by the annotation file provided), that's why you are inferring landmarks.
     # load data, filter to 68 landmarks
     # TODO: does this clash with the 30/20 filter?
@@ -172,7 +179,7 @@ if __name__ == "__main__":
     files = glob.glob(os.path.join(faces_folder_path, "*.jpg"))
     # landmarks = file_landmarks(f)
     # ground_truths = list(map(file_landmarks, tqdm(files)))
-    landmarks_pics = list(map(lambda f: estimate_points(f, identity, expression), tqdm(files)))
+    landmarks_pics = list(map(lambda f: estimate_points([f], identity, expression).squeeze(), tqdm(files)))
 
     # Visualize predicted landmarks overlayed on ground truth.
     for landmarks, fpath in zip(landmarks_pics, files):
@@ -180,4 +187,4 @@ if __name__ == "__main__":
         print('plotting')
         plot_landmarks([ground_truth, landmarks])
         print('plotted')
-        plt.savefig('estimation_' + os.path.basename(fpath))
+        plt.savefig('results/estimation_' + os.path.basename(fpath))
