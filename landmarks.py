@@ -89,4 +89,4 @@ if __name__ == "__main__":
     # Keep face closer to the frontal and neutral for now.
     data = files_landmarks()
     plot_landmarks(data)
-    plt.savefig('landmarks.png')
+    plt.savefig('results/landmarks.png')

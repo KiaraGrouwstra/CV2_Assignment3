@@ -99,7 +99,7 @@ for i, angle in enumerate([-10, 10]):
     img = mesh_to_png(mesh)
     plt.subplot(2, 1, i+1)
     plt.imshow(img)
-plt.savefig('pinhole_camera.png')
+plt.savefig('results/pinhole_camera.png')
 
 vertex_idxs = load_landmarks()
 

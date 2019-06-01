@@ -23,7 +23,7 @@ def main(args):
         # img = render_mesh(mesh)
         plt.subplot(rows, cols, i+1)
         plt.imshow(img)
-    plt.savefig('morphable_model.png')
+    plt.savefig('results/morphable_model.png')
 
 
 if __name__ == "__main__":
