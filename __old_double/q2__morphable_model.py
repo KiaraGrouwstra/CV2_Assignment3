@@ -32,12 +32,12 @@ def load_data(path='model2017-1_face12_nomouth.h5'):
     pca_exp.clip(N_EXP)
     return pca_id, pca_exp, c, tri
 
-def mesh_to_png(mesh, file_name=None):
+def mesh_to_png(mesh, file_name=None, resolution=(1024, 768)):
     mesh = trimesh.base.Trimesh(
         vertices=mesh.vertices,
         faces=mesh.triangles,
         vertex_colors=mesh.colors)
-    png = mesh.scene().save_image()
+    png = mesh.scene().save_image(resolution)
     if file_name != None:
         with open(file_name, 'wb') as f:
             f.write(png)
@@ -46,12 +46,12 @@ def mesh_to_png(mesh, file_name=None):
 def png_to_img(png):
     return plt.imread(io.BytesIO(png))
 
-def plot_scene(geo, color, tri, ax=None):
+def plot_scene(geo, color, tri, ax=None, resolution=(1024, 768)):
     mesh = Mesh(geo, color, tri)
-    img = png_to_img(mesh_to_png(mesh))
+    img = png_to_img(mesh_to_png(mesh, resolution=resolution))
     if ax != None:
         ax.imshow(img)
-        ax.axis('off')
+        # ax.axis('off')
     else:
         plt.imshow(img)
     return
