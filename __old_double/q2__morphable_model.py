@@ -14,8 +14,8 @@ def read_pca(bfm, path):
             (-1, 3))
     pc = np.asarray(bfm[f'{path}/pcaBasis'], dtype=np.float32).reshape(
             *mean.shape, -1)
-    std = np.asarray(bfm[f'{path}/pcaVariance'], dtype=np.float32)
-    return PCAModel(mean, pc, std)
+    var = np.asarray(bfm[f'{path}/pcaVariance'], dtype=np.float32)
+    return PCAModel(mean, pc, np.sqrt(var))
 
 def load_data_all(path='model2017-1_face12_nomouth.h5'):
     bfm = h5py.File(path, 'r')
