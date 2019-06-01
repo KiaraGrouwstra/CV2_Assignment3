@@ -41,6 +41,8 @@ def file_landmarks(f):
     print("Processing file: {}".format(f))
     img = dlib.load_rgb_image(f)
     landmarks = detect_landmark(img)
+    # apparently all landmarks displayed in reverse (over both axes) in our images!
+    landmarks *= -1
     return landmarks
 
 def rescale_landmarks(landmarks):
