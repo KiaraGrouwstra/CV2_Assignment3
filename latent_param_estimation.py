@@ -5,6 +5,7 @@ import dlib
 import glob
 import numpy as np
 from tqdm import tqdm, trange
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -21,11 +22,12 @@ def rotation_matrix_y(y_deg):
        Assuming object translation to be 0.
     """
     y_rad = y_deg / 180 * np.pi 
-    R = torch.eye(4)
-    R[0, 0] =  torch.cos(y_rad)
-    R[0, 2] =  torch.sin(y_rad)
-    R[2, 0] = -torch.sin(y_rad)
-    R[2, 2] =  torch.cos(y_rad)
+    R = torch.tensor([
+        [torch.cos(y_rad), 0., torch.sin(y_rad), 0.],
+        [0., 1., 0., 0.],
+        [-torch.sin(y_rad), 0., torch.cos(y_rad), 0.],
+        [0., 0., 0., 1.],
+    ])
     return R
 
 
@@ -37,15 +39,14 @@ def viewport_matrix(l=-1, r=1, t=1, b=-1):
     @param t: top
     @param b: bottom
     """
-    V = torch.eye(4)
     w = r - l
     h = t - b
-    V[0, 0] = .5 * w
-    V[1, 1] = .5 * h
-    V[2, 2] = .5
-    V[3, 0] = .5 * (r + l)
-    V[3, 1] = .5 * (t + b)
-    V[3, 2] = .5
+    V = .5 * torch.tensor([
+        [w, 0., 0., 0.],
+        [0., h, 0., 0.],
+        [0., 0., 1., 0.],
+        [r + l, t + b, 1., 2.],
+    ])
     return V
 
 def perspective_matrix(t, b, l, r, n, f):
@@ -58,16 +59,14 @@ def perspective_matrix(t, b, l, r, n, f):
     @param n: near
     @param f: far
     """
-    P = torch.zeros((4, 4))
     w = r - l
     h = t - b
-    P[0, 0] = 2 * n / w
-    P[1, 1] = 2 * n / h
-    P[2, 0] = (r + l) / w
-    P[2, 1] = (t + b) / h
-    P[2, 2] = -(f + n) / (f - n)
-    P[2, 3] = -1
-    P[3, 2] = -2 * f * n / (f - n)
+    P = torch.tensor([
+        [2. * n / w, 0., 0., 0.],
+        [0., 2. * n / h, 0., 0.],
+        [(r + l) / w, (t + b) / h, -(f + n) / (f - n), -1.],
+        [0., 0., -2. * f * n / (f - n), 0.],
+    ])
     return P
 
 
@@ -81,12 +80,14 @@ def project_points(S, near, R):
     return p.t()
 
 
+# project_face(torch.tensor([[1, 2, 3]]).float(), torch.tensor(90).float(), torch.tensor((0, 0, -200)))
 def project_face(G, omega, t):
     (num_points, _) = G.shape
     S = torch.cat((G.t(), torch.ones((1, num_points))))
     R = rotation_matrix_y(omega)
     G_ = (R @ S)[:3].t()
-    R[3, 0:3] = t
+    # R[3, 0:3] = t
+    R = torch.cat((R[:3], torch.cat((t, torch.tensor([1.]))).float().unsqueeze(dim=-1).t()))
     points = project_points(G_, near=1, R=R)
     return points
 
@@ -151,7 +152,7 @@ def estimate_points(f, identity, expression):
         optimizer.step()
 
     print(model)
-    return model.points
+    return model.points.detach().numpy()
 
 
 if __name__ == "__main__":
@@ -169,8 +170,14 @@ if __name__ == "__main__":
     # get pic landmarks
     faces_folder_path = 'pics'
     files = glob.glob(os.path.join(faces_folder_path, "*.jpg"))
+    # landmarks = file_landmarks(f)
+    # ground_truths = list(map(file_landmarks, tqdm(files)))
     landmarks_pics = list(map(lambda f: estimate_points(f, identity, expression), tqdm(files)))
 
     # Visualize predicted landmarks overlayed on ground truth.
-    plot_landmarks(landmarks_pics)
-    plt.savefig('estimation.png')
+    for landmarks, fpath in zip(landmarks_pics, files):
+        ground_truth = file_landmarks(fpath)
+        print('plotting')
+        plot_landmarks([ground_truth, landmarks])
+        print('plotted')
+        plt.savefig('estimation_' + os.path.basename(fpath))
