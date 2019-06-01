@@ -23,6 +23,7 @@ class PCAModel:
         self.pc = self.pc[:, :, :min(self.pc.shape[2], n)]
         self.std = self.std[:min(self.pc.shape[0], n)]
 
-    def sample(self):
-        epsilon = np.random.uniform(-1.0, 1.0)
+    def sample(self, epsilon=None):
+        if epsilon == None:
+            epsilon = np.random.uniform(-1.0, 1.0)
         return self.mean + self.pc.dot(epsilon * np.sqrt(self.std))
