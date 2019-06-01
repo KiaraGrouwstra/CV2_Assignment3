@@ -52,11 +52,15 @@ def rescale_landmarks(landmarks):
         landmarks[:, i] = landmarks[:, i] / difference
     return landmarks
 
+def flipper_upper(landmarks):
+    landmarks *= -1
+    return landmarks
+
 def plot_landmarks(data):
     """Visualize predicted landmarks overlayed on ground truth"""
     for i in range(len(data)):
         data[i] = rescale_landmarks(data[i])
-        # data[0] = np.flip(data[0], 1)
+        # data[i] = flipper_upper(data[i])
         plt.scatter(data[i][:, 0], data[i][:, 1])
     plt.show()
 
