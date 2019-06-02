@@ -9,9 +9,11 @@ FAR = 2000.0
 FOVY = 0.5
 CAMERA_T = np.asarray([0.0, 0.0, -400.0])
 
+# normalize(np.array([[2,3,4]]))
 def normalize(x):
     return x / x[:, -1].reshape(-1, 1)
 
+# to_homogenous(np.array([[3,4]]))
 def to_homogenous(x):
     return np.c_[x, np.ones(x.shape[0])]
 

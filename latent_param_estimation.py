@@ -13,6 +13,88 @@ from data_def import Mesh
 
 from landmarks import file_landmarks, plot_landmarks
 from utils import load_data, load_landmarks, reconstruct_face
+# functions the same as their numpy versions
+from pinhole_camera import normalize, from_homogenous
+
+CAMERA_T = torch.tensor([0.0, 0.0, -400.0])
+
+def to_homogenous(x):
+    ones = torch.ones((x.shape[0], 1))
+    return torch.cat((x.float(), ones), dim=1)
+
+def apply_transform(x, M):
+    return from_homogenous(torch.mm(M, to_homogenous(x).t()).t())
+
+def construct_V(cx, cy):
+    V = torch.tensor([[ cx, 0.0, 0.0,  cx],
+                    [0.0, -cy, 0.0,  cy],
+                    [0.0, 0.0, 0.5, 0.5],
+                    [0.0, 0.0, 0.0, 1.0]])
+    return V
+
+def construct_P(near, far, fovy, aspect_ratio):
+    top = torch.tan(fovy / 2.0) * near
+    right = top * aspect_ratio
+    left = -right
+    bottom = -top
+    near_2 = 2 * near
+    P = torch.tensor([
+        [near_2, 0.0, right + left, 0.0],
+        [0.0, near_2, top + bottom, 0.0],
+        [0.0, 0.0, -(far + near), -near_2 * far],
+        [0.0, 0.0, -1.0, 0.0],
+    ])
+    P /= torch.tensor([right - left, top - bottom, far - near, 1.0]).reshape(-1, 1)
+    return P
+
+def construct_R(theta_x, theta_y, theta_z):
+    to_rad = lambda theta: theta * np.pi / 180.0
+    theta_x = to_rad(theta_x)
+    theta_y = to_rad(theta_y)
+    theta_z = to_rad(theta_z)
+    sin_x, cos_x = torch.sin(theta_x), torch.cos(theta_x)
+    sin_y, cos_y = torch.sin(theta_y), torch.cos(theta_y)
+    sin_z, cos_z = torch.sin(theta_z), torch.cos(theta_z)
+    R_x = torch.tensor([
+        [1., 0., 0.],
+        [0., cos_x, -sin_x],
+        [0., sin_x, cos_x],
+    ])
+    R_y = torch.tensor([
+        [cos_y, 0., sin_y],
+        [0., 1., 0.],
+        [-sin_y, 0., cos_y],
+    ])
+    R_z = torch.tensor([
+        [cos_z, -sin_z, 0.],
+        [sin_z, cos_z, 0.],
+        [0., 0., 1.],
+    ])
+    # 3x3
+    R = torch.mm(R_z, torch.mm(R_y, R_x))
+    # 4x4: extra zeroes
+    R = torch.cat((torch.cat((R, torch.tensor([[0., 0., 0.]]).t()), dim=1), torch.tensor([[0., 0., 0., 1.]])), dim=0)
+    return R
+
+def construct_T(x, y, z):
+    T = torch.eye(4)
+    T = torch.cat((T[:,:-1], to_homogenous(torch.tensor([[x, y, z]])).t()), dim=1)
+    return T
+
+# TODO
+# def construct_obj_to_cam(omega, t, resolution=(1.0, 1.0)):
+#     aspect_ratio = resolution[0] / float(resolution[1])
+#     T = construct_T(*t)
+#     R = construct_R(*omega)
+#     model_mat = T.dot(R)
+#     view_mat = construct_T(*CAMERA_T)
+#     projection_mat = construct_P(NEAR, FAR, FOVY, aspect_ratio)
+#     viewport_mat = construct_V(resolution[0] / 2.0, resolution[1] / 2.0)
+#     M = viewport_mat.dot(projection_mat.dot(view_mat.dot(model_mat)))
+#     return M
+
+
+
 
 def rotation_matrix_y(y_deg):
     """Get the Y rotation matrix (https://bit.ly/2PQ8glW) for a given rotation angle (in degrees).
