@@ -146,12 +146,17 @@ def train_model(model):
     lr = 0.1
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     # - Assuming α, δ, ω, t to be latent parameters of your model optimize an Energy described above using Adam optimizer until convergence.
-    for i in trange(100):
+    prev_loss = 0
+    for i in trange(1000):
         optimizer.zero_grad()
         loss = model.forward()
         print(i, loss)
         loss.backward()
         optimizer.step()
+        if (abs(prev_loss - loss.item()) < 0.1):
+            print("converged")
+            break
+        prev_loss = loss.item()
     return model
 
 def estimate_points(files, identity, expression):
