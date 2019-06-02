@@ -38,7 +38,7 @@ def detect_landmark(img):
         # Draw the face landmarks on the screen.
         # apparently all landmarks displayed in reverse (over both axes) in our images, so flip them!
         # return shape_to_np(shape)
-        return -1 * shape_to_np(shape)
+        return shape_to_np(shape)
 
     return np.array([])
 
