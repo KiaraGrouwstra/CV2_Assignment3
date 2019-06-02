@@ -21,7 +21,7 @@ def shape_to_np(shape, dtype="int"):
     # return the list of (x, y)-coordinates
     return coords
 
-def detect_landmark(img):
+def _detect_landmark(img):
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
@@ -42,6 +42,9 @@ def detect_landmark(img):
         #return -1* rescale_landmarks(shape_to_np(shape))
 
     return np.array([])
+
+def detect_landmark(img):
+    return -1* rescale_landmarks(_detect_landmark(img))
 
 def file_landmarks(f):
     print("Processing file: {}".format(f))
@@ -92,7 +95,7 @@ def files_landmarks():
 
 def main(path):
     im = dlib.load_rgb_image(path)
-    landmarks = detect_landmark(im)
+    landmarks = _detect_landmark(im)
     plt.figure()
     plt.imshow(im)
     plt.scatter(landmarks[:, 0], landmarks[:, 1], s=8, c='r')
