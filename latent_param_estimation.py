@@ -47,33 +47,34 @@ def construct_P(near, far, fovy, aspect_ratio):
     P /= torch.tensor([right - left, top - bottom, far - near, 1.0]).reshape(-1, 1)
     return P
 
-# TODO
-# def construct_R(theta_x, theta_y, theta_z):
-#     to_rad = lambda theta: theta * np.pi / 180.0
-#     theta_x = to_rad(theta_x)
-#     theta_y = to_rad(theta_y)
-#     theta_z = to_rad(theta_z)
-#     sin_x, cos_x = np.sin(theta_x), np.cos(theta_x)
-#     sin_y, cos_y = np.sin(theta_y), np.cos(theta_y)
-#     sin_z, cos_z = np.sin(theta_z), np.cos(theta_z)
-#     R_x = np.asarray([
-#         [1, 0, 0],
-#         [0, cos_x, -sin_x],
-#         [0, sin_x, cos_x]
-#     ])
-#     R_y = np.asarray([
-#         [cos_y, 0, sin_y],
-#         [0, 1, 0],
-#         [-sin_y, 0, cos_y]
-#     ])
-#     R_z = np.asarray([
-#         [cos_z, -sin_z, 0],
-#         [sin_z, cos_z, 0],
-#         [0, 0, 1]
-#     ])
-#     R = np.eye(4)
-#     R[:-1, :-1] = R_z.dot(R_y.dot(R_x))
-#     return R
+def construct_R(theta_x, theta_y, theta_z):
+    to_rad = lambda theta: theta * np.pi / 180.0
+    theta_x = to_rad(theta_x)
+    theta_y = to_rad(theta_y)
+    theta_z = to_rad(theta_z)
+    sin_x, cos_x = torch.sin(theta_x), torch.cos(theta_x)
+    sin_y, cos_y = torch.sin(theta_y), torch.cos(theta_y)
+    sin_z, cos_z = torch.sin(theta_z), torch.cos(theta_z)
+    R_x = torch.tensor([
+        [1., 0., 0.],
+        [0., cos_x, -sin_x],
+        [0., sin_x, cos_x],
+    ])
+    R_y = torch.tensor([
+        [cos_y, 0., sin_y],
+        [0., 1., 0.],
+        [-sin_y, 0., cos_y],
+    ])
+    R_z = torch.tensor([
+        [cos_z, -sin_z, 0.],
+        [sin_z, cos_z, 0.],
+        [0., 0., 1.],
+    ])
+    # 3x3
+    R = torch.mm(R_z, torch.mm(R_y, R_x))
+    # 4x4: extra zeroes
+    R = torch.cat((torch.cat((R, torch.tensor([[0., 0., 0.]]).t()), dim=1), torch.tensor([[0., 0., 0., 1.]])), dim=0)
+    return R
 
 def construct_T(x, y, z):
     T = torch.eye(4)
