@@ -13,9 +13,7 @@ def main(args):
 
     fig = plt.figure(figsize=(10, 10))
     for i in range(rows * cols):
-        alpha = np.random.uniform(-1.0, 1.0)
-        delta = np.random.uniform(-1.0, 1.0)
-        G = reconstruct_face(identity, expression, alpha, delta)
+        G = reconstruct_face(identity, expression)
         img = geo_to_im(G, texture.mean, triangles)
         plt.subplot(rows, cols, i+1)
         plt.imshow(img)

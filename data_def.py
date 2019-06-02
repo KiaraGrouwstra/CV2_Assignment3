@@ -26,7 +26,9 @@ class PCAModel:
         self.pc = pc
         self.std = std
 
-    def sample(self, off=np.random.uniform(-1.0, 1.0)):
+    def sample(self, off=None):
+        if off == None:
+            off = np.random.uniform(-1.0, 1.0, self.std.shape)
         return self.mean + self.pc @ (off * self.std)
 
     def filter(self, n):

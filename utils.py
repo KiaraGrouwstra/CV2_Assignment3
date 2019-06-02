@@ -100,10 +100,7 @@ def geo_to_im(geo, color, tri, resolution=None):
 #     img = mpimg.imread(file_name)
 #     return img
 
-def reconstruct_face(identity,
-                     expression,
-                     alpha=np.random.uniform(-1.0, 1.0),
-                     delta=np.random.uniform(-1.0, 1.0)):
+def reconstruct_face(identity, expression, alpha=None, delta=None):
     """generate a point cloud using eq. 1.
        uniformly sample alpha and delta from -1~1.
     """

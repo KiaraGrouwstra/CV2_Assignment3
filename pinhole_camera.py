@@ -93,6 +93,9 @@ def main():
     color = color.mean
     v_idx = load_landmarks()
 
+    # set geometry (use mean value)
+    geo = pca_id.sample(0.0)
+
     if ARGS.debug:
 
         # parameters
@@ -100,7 +103,6 @@ def main():
         t = [0.0, 0.0, 0.0]
 
         # reproduce debug data
-        geo = pca_id.sample(0.0)
         im = geo_to_im(geo, color, tri)
         resolution = tuple(im.shape[:2][::-1])
         M = construct_obj_to_cam(omega, t, resolution)
@@ -129,9 +131,6 @@ def main():
         plt.tight_layout()
 
     else:
-
-        # sample geometry
-        geo = pca_id.sample() + pca_exp.sample()
 
         # determine left and right rotated images
         R_l = construct_R(0,  10, 0)
