@@ -16,6 +16,9 @@ from utils import load_data, load_landmarks, reconstruct_face
 # functions the same as their numpy versions
 from pinhole_camera import normalize, from_homogenous
 
+NEAR = torch.tensor([300.0])
+FAR = torch.tensor([2000.0])
+FOVY = torch.tensor([0.5])
 CAMERA_T = torch.tensor([0.0, 0.0, -400.0])
 
 def to_homogenous(x):
@@ -81,17 +84,16 @@ def construct_T(x, y, z):
     T = torch.cat((T[:,:-1], to_homogenous(torch.tensor([[x, y, z]])).t()), dim=1)
     return T
 
-# TODO
-# def construct_obj_to_cam(omega, t, resolution=(1.0, 1.0)):
-#     aspect_ratio = resolution[0] / float(resolution[1])
-#     T = construct_T(*t)
-#     R = construct_R(*omega)
-#     model_mat = T.dot(R)
-#     view_mat = construct_T(*CAMERA_T)
-#     projection_mat = construct_P(NEAR, FAR, FOVY, aspect_ratio)
-#     viewport_mat = construct_V(resolution[0] / 2.0, resolution[1] / 2.0)
-#     M = viewport_mat.dot(projection_mat.dot(view_mat.dot(model_mat)))
-#     return M
+def construct_obj_to_cam(omega, t, resolution=(1.0, 1.0)):
+    aspect_ratio = resolution[0] / float(resolution[1])
+    T = construct_T(*list(t.t()))
+    R = construct_R(*list(omega.t()))
+    model_mat = torch.mm(T, R)
+    view_mat = construct_T(*CAMERA_T)
+    projection_mat = construct_P(NEAR, FAR, FOVY, aspect_ratio)
+    viewport_mat = construct_V(resolution[0] / 2.0, resolution[1] / 2.0)
+    M = torch.mm(viewport_mat, torch.mm(projection_mat, torch.mm(view_mat, model_mat)))
+    return M
 
 
 
