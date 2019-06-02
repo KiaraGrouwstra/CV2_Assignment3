@@ -12,6 +12,7 @@ CAMERA_T = np.asarray([0.0, 0.0, -400.0])
 def normalize(x):
     return x / x[:, -1].reshape(-1, 1)
 
+# to_homogenous(np.array([[3,4]]))
 def to_homogenous(x):
     return np.c_[x, np.ones(x.shape[0])]
 
