@@ -13,24 +13,17 @@ from data_def import Mesh
 
 from landmarks import file_landmarks, plot_landmarks
 from utils import load_data, load_landmarks, reconstruct_face
+# functions the same as their numpy versions
+from pinhole_camera import normalize, from_homogenous
 
 CAMERA_T = torch.tensor([0.0, 0.0, -400.0])
-
-# same as numpy version
-def normalize(x):
-    return x / x[:, -1].reshape(-1, 1)
 
 def to_homogenous(x):
     ones = torch.ones((x.shape[0], 1))
     return torch.cat((x.float(), ones), dim=1)
 
-# TODO
-# def from_homogenous(x):
-#     return normalize(x)[:, :-1]
-
-# TODO
-# def apply_transform(x, M):
-#     return from_homogenous(M.dot(to_homogenous(x).T).T)
+def apply_transform(x, M):
+    return from_homogenous(torch.mm(M, to_homogenous(x).t()).t())
 
 def construct_V(cx, cy):
     V = torch.tensor([[ cx, 0.0, 0.0,  cx],
