@@ -98,79 +98,80 @@ def construct_obj_to_cam(omega, t, resolution=(1.0, 1.0)):
 
 
 
-def rotation_matrix_y(y_deg):
-    """Get the Y rotation matrix (https://bit.ly/2PQ8glW) for a given rotation angle (in degrees).
-       Assuming object translation to be 0.
-    """
-    y_rad = y_deg / 180 * np.pi 
-    R = torch.tensor([
-        [torch.cos(y_rad), 0., torch.sin(y_rad), 0.],
-        [0., 1., 0., 0.],
-        [-torch.sin(y_rad), 0., torch.cos(y_rad), 0.],
-        [0., 0., 0., 1.],
-    ]).float()
-    return R
+# def rotation_matrix_y(y_deg):
+#     """Get the Y rotation matrix (https://bit.ly/2PQ8glW) for a given rotation angle (in degrees).
+#        Assuming object translation to be 0.
+#     """
+#     y_rad = y_deg / 180 * np.pi 
+#     R = torch.tensor([
+#         [torch.cos(y_rad), 0., torch.sin(y_rad), 0.],
+#         [0., 1., 0., 0.],
+#         [-torch.sin(y_rad), 0., torch.cos(y_rad), 0.],
+#         [0., 0., 0., 1.],
+#     ]).float()
+#     return R
 
 
-def viewport_matrix(l=-1, r=1, t=1, b=-1):
-    """
-    viewport matrix: http://glasnost.itcarlow.ie/~powerk/GeneralGraphicsNotes/projection/viewport_transformation.html
-    @param l: left
-    @param r: right
-    @param t: top
-    @param b: bottom
-    """
-    w = r - l
-    h = t - b
-    V = .5 * torch.tensor([
-        [w, 0., 0., 0.],
-        [0., h, 0., 0.],
-        [0., 0., 1., 0.],
-        [r + l, t + b, 1., 2.],
-    ])
-    return V
+# def viewport_matrix(l=-1, r=1, t=1, b=-1):
+#     """
+#     viewport matrix: http://glasnost.itcarlow.ie/~powerk/GeneralGraphicsNotes/projection/viewport_transformation.html
+#     @param l: left
+#     @param r: right
+#     @param t: top
+#     @param b: bottom
+#     """
+#     w = r - l
+#     h = t - b
+#     V = .5 * torch.tensor([
+#         [w, 0., 0., 0.],
+#         [0., h, 0., 0.],
+#         [0., 0., 1., 0.],
+#         [r + l, t + b, 1., 2.],
+#     ])
+#     return V
 
-def perspective_matrix(t, b, l, r, n, f):
-    """
-    perspective projection matrix: https://bit.ly/300gYmf
-    @param t: top
-    @param b: bottom
-    @param l: left
-    @param r: right
-    @param n: near
-    @param f: far
-    """
-    w = r - l
-    h = t - b
-    P = torch.tensor([
-        [2. * n / w, 0., 0., 0.],
-        [0., 2. * n / h, 0., 0.],
-        [(r + l) / w, (t + b) / h, -(f + n) / (f - n), -1.],
-        [0., 0., -2. * f * n / (f - n), 0.],
-    ])
-    return P
-
-
-def project_points(S, near, R):
-    """project points following equation 2"""
-    P = perspective_matrix(1, -1, 1, -1, near, 100)
-    ones = torch.ones((S.shape[0], 1))
-    S = torch.cat((S, ones), dim=1)
-    V = viewport_matrix()
-    p = V.t() @ P.t() @ R @ S.t()
-    return p.t()
+# def perspective_matrix(t, b, l, r, n, f):
+#     """
+#     perspective projection matrix: https://bit.ly/300gYmf
+#     @param t: top
+#     @param b: bottom
+#     @param l: left
+#     @param r: right
+#     @param n: near
+#     @param f: far
+#     """
+#     w = r - l
+#     h = t - b
+#     P = torch.tensor([
+#         [2. * n / w, 0., 0., 0.],
+#         [0., 2. * n / h, 0., 0.],
+#         [(r + l) / w, (t + b) / h, -(f + n) / (f - n), -1.],
+#         [0., 0., -2. * f * n / (f - n), 0.],
+#     ])
+#     return P
 
 
-# project_face(torch.tensor([[1, 2, 3]]).float(), torch.tensor(90).float(), torch.tensor((0, 0, -200)))
-def project_face(G, omega, t):
-    (num_points, _) = G.shape
-    S = torch.cat((G.t(), torch.ones((1, num_points))))
-    R = rotation_matrix_y(omega)
-    G_ = (R @ S)[:3].t()
-    # R[3, 0:3] = t
-    R = torch.cat((R[:3], torch.cat((t.float(), torch.tensor([1.]))).float().unsqueeze(dim=-1).t()))
-    points = project_points(G_, near=1, R=R)
-    return points
+# def project_points(S, near, R):
+#     """project points following equation 2"""
+#     P = perspective_matrix(1, -1, 1, -1, near, 100)
+#     ones = torch.ones((S.shape[0], 1))
+#     S = torch.cat((S, ones), dim=1)
+#     V = viewport_matrix()
+#     p = V.t() @ P.t() @ R @ S.t()
+#     return p.t()
+
+
+# # project_face(torch.tensor([[1, 2, 3]]).float(), torch.tensor(90).float(), torch.tensor((0, 0, -200)))
+# def project_face(G, omega, t):
+#     (num_points, _) = G.shape
+#     S = torch.cat((G.t(), torch.ones((1, num_points))))
+#     R = rotation_matrix_y(omega)
+#     G_ = (R @ S)[:3].t()
+#     # R[3, 0:3] = t
+#     R = torch.cat((R[:3], torch.cat((t.float(), torch.tensor([1.]))).float().unsqueeze(dim=-1).t()))
+#     points = project_points(G_, near=1, R=R)
+#     return points
+
 
 class Model(nn.Module):
 
@@ -218,7 +219,15 @@ class Model(nn.Module):
             expr = torch.tensor(self.expression.mean) + torch.tensor(self.expression.pc) @ (self.delta[i] * torch.sqrt(torch.tensor(self.expression.std)))
             G = geom + expr
 
-            self.points[i] = project_face(G, self.omega[i], self.t[:, i])
+            # self.points[i] = project_face(G, self.omega[i], self.t[:, i])
+
+            R_l = construct_R(0,  10, 0)
+            geo_l = apply_transform(geo, R_l)
+            im_l = geo_to_im(geo_l, texture, triangles)
+            resolution = tuple(im_l.shape[:2][::-1])
+            M = construct_obj_to_cam(self.omega[i], self.t[:, i], resolution)
+            self.points[i] = apply_transform(G, M)
+
             # Given 68 ground truth facial landmarks the following energy can be optimized: Lfit=Llan+Lreg(3)Llan=68∑j=1∥∥pkibj−lj∥∥22(4)where pkj is a 2D projection of a landmark point kj from Landmarks68_model2017-1_face12_nomouth.anl and lj is its ground truth 2D coordinate.
             L_lan = (self.points[i, :, 0:2] - self.ground_truth[i]).norm().pow(2).sum()
             # We regularize the model using Tikhonov regularization to enforce the model to predict faces closer to the mean: Lreg=λalpha30∑i=1α2i+λdelta20∑i=1δ2i(5)
