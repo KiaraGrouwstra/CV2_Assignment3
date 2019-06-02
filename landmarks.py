@@ -39,7 +39,7 @@ def detect_landmark(img):
         # Draw the face landmarks on the screen.
         # apparently all landmarks displayed in reverse (over both axes) in our images, so flip them!
         # return shape_to_np(shape)
-        return -1 * shape_to_np(shape)
+        return shape_to_np(shape)
 
     return np.array([])
 
@@ -66,7 +66,7 @@ def plot_landmarks(data):
     """Visualize predicted landmarks overlayed on ground truth"""
     labels = ["ground truth", "model"]
     for i in range(len(data)):
-        data[i] = rescale_landmarks(data[i])
+        # data[i] = rescale_landmarks(data[i])
         # data[i] = flipper_upper(data[i])
         plt.scatter(data[i][:, 0], data[i][:, 1], label=labels[i])
         for j in range(len(data[i])):
