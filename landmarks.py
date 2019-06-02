@@ -8,6 +8,7 @@ from tqdm import tqdm
 from pathlib import Path
 import matplotlib.pyplot as plt
 
+
 def shape_to_np(shape, dtype="int"):
     # initialize the list of (x, y)-coordinates
     coords = np.zeros((68, 2), dtype=dtype)
@@ -89,10 +90,23 @@ def files_landmarks():
         print(f'Loaded data \'{pickled_file}\'.')
     return data
 
+def main(path):
+    im = dlib.load_rgb_image(path)
+    landmarks = -detect_landmark(im)
+    plt.figure()
+    plt.imshow(im)
+    plt.scatter(landmarks[:, 0], landmarks[:, 1], s=8, c='r')
+    plt.show()
+    return
+
 if __name__ == "__main__":
     # Take a single picture of yourself or pick random one from the web.
     # Extract ground truth landmarks using Dlib (http://dlib.net/face_landmark_detection.py.html).
     # Keep face closer to the frontal and neutral for now.
-    data = files_landmarks()
-    plot_landmarks(data)
-    plt.savefig('results/landmarks.png')
+    if len(sys.argv) < 2:
+        data = files_landmarks()
+        print(data)
+        plot_landmarks(data)
+        plt.savefig('results/landmarks.png')
+    else:
+        main(sys.argv[1])
