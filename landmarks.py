@@ -38,8 +38,8 @@ def detect_landmark(img):
         shape = predictor(img, d)
         # Draw the face landmarks on the screen.
         # apparently all landmarks displayed in reverse (over both axes) in our images, so flip them!
-        # return shape_to_np(shape)
-        return -1* rescale_landmarks(shape_to_np(shape))
+        return shape_to_np(shape)
+        #return -1* rescale_landmarks(shape_to_np(shape))
 
     return np.array([])
 
@@ -92,7 +92,7 @@ def files_landmarks():
 
 def main(path):
     im = dlib.load_rgb_image(path)
-    landmarks = -detect_landmark(im)
+    landmarks = detect_landmark(im)
     plt.figure()
     plt.imshow(im)
     plt.scatter(landmarks[:, 0], landmarks[:, 1], s=8, c='r')
@@ -104,9 +104,12 @@ if __name__ == "__main__":
     # Extract ground truth landmarks using Dlib (http://dlib.net/face_landmark_detection.py.html).
     # Keep face closer to the frontal and neutral for now.
     if len(sys.argv) < 2:
+        print('No input file given')
+        """
         data = files_landmarks()
         print(data)
         plot_landmarks(data)
         plt.savefig('results/landmarks.png')
+        """
     else:
         main(sys.argv[1])

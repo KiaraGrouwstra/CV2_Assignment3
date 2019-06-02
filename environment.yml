@@ -4,6 +4,7 @@ channels:
 - conda-forge
 - menpo
 - pytorch
+- tensorflow
 dependencies:
 - dlib
 - h5py

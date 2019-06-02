@@ -27,7 +27,7 @@ class PCAModel:
         self.std = std
 
     def sample(self, off=None):
-        if off == None:
+        if off is None:
             off = np.random.uniform(-1.0, 1.0, self.std.shape)
         return self.mean + self.pc @ (off * self.std)
 

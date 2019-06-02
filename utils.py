@@ -131,3 +131,14 @@ def render_mesh(mesh, h=256, w=256):
     r = OffscreenRenderer(h, w)
     color, depth = r.render(scene)
     return color
+
+def construct_model(pca_id, pca_exp, alpha, delta, omega, t,
+        resolution=(1.0, 1.0)):
+    geo = pca_id.sample(alpha) + pca_exp.sample(delta)
+    M = construct_obj_to_cam(omega, t, resolution)
+    geo_ = apply_transform(geo, M)
+    geo_gl = apply_transform(geo, construct_T(*t).dot(construct_R(*omega)))
+    return geo_, geo_gl
+
+
+
