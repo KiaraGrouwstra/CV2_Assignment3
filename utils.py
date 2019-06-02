@@ -5,6 +5,9 @@ from pyrender import Scene, Viewer, PerspectiveCamera, DirectionalLight, PointLi
 import tempfile
 import matplotlib.image as mpimg
 import trimesh
+import matplotlib.pyplot as plt
+import io
+
 
 from data_def import Mesh, PCAModel
 
@@ -14,8 +17,8 @@ NUM_EXPRESSION = 20
 def read_pca(bfm, path, k):
     mean = np.asarray(bfm[f'{path}/mean'],        dtype=np.float32).reshape((-1, 3))     # (N, 3)
     base = np.asarray(bfm[f'{path}/pcaBasis'],    dtype=np.float32).reshape((-1, 3, k))  # (N, 3, k)
-    sig2 = np.asarray(bfm[f'{path}/pcaVariance'], dtype=np.float32)  # (k,)
-    return PCAModel(mean, base, sig2)
+    var = np.asarray(bfm[f'{path}/pcaVariance'], dtype=np.float32)  # (k,)
+    return PCAModel(mean, base, np.sqrt(var))
 
 def load_data():
     """load in the Morphace dataset; N = 28588, K = 56572"""
@@ -36,14 +39,30 @@ def load_landmarks():
     vertex_idxs = list(map(int, lines))
     return vertex_idxs
 
-def mesh_to_png(mesh, file_name=None):
-    png = mesh.trimesh().scene().save_image()
-    if not file_name:
-        file_name = tempfile.mktemp()
-    with open(file_name, 'wb') as f:
-        f.write(png)
-    img = mpimg.imread(file_name)
-    return img
+def mesh_to_png(mesh, file_name=None, resolution=None):
+    mesh = trimesh.base.Trimesh(
+        vertices=mesh.vertices,
+        faces=mesh.triangles,
+        vertex_colors=mesh.colors)
+    scene = mesh.scene()
+    if resolution == None:
+        png = scene.save_image()
+    else:
+        png = scene.save_image(resolution=resolution)
+    if file_name != None:
+        with open(file_name, 'wb') as f:
+            f.write(png)
+    return png
+
+def png_to_im(png):
+    return plt.imread(io.BytesIO(png))
+
+def geo_to_im(geo, color, tri, resolution=None):
+    mesh = Mesh(geo, color, tri)
+    png = mesh_to_png(mesh, resolution=resolution)
+    im = png_to_im(png)
+    return im
+
 
 # def mesh_to_png(mesh, file_name=None, width=640, height=480, z_camera_translation=400):
 #     # png = mesh.trimesh().scene().save_image()

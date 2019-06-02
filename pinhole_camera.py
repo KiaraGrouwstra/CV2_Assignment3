@@ -1,133 +1,185 @@
+from utils import load_data, geo_to_im
 import numpy as np
 import matplotlib.pyplot as plt
-from data_def import Mesh
-from utils import load_data, mesh_to_png, reconstruct_face, load_landmarks
-from pdb import set_trace
-import itertools
-from mpl_toolkits.mplot3d import Axes3D
-
-# - Section 3, Equation 2: [\hat{x}, \hat{y}, \hat{z}, \hat{d}] are homogeneous coordinates obtained after projection. You can remove homogeneous coordinate by dividing by \hat{d} and get u, v and depth respectively. You can check SfM lecture for more details about camera projections.
-# - To convert homogeneous coordinate back to obtain u,v coordinates you just need to divide by a homogeneous coordinate, no division by depth is required.
-# - Section 3: Your camera origin is at (0, 0, 0), camera view direction is (0, 0, -1). Consequently, 3D model is initially behind the camera, therefore remember to shift an object using z translation from section 4.
-# - For projection matrix you can set principal point to be in the center of an image {W/2, H/2} and fovy to be 0.5.
-
-def rotation_matrix_y(y_deg):
-    """Get the Y rotation matrix (https://bit.ly/2PQ8glW) for a given rotation angle (in degrees).
-       Assuming object translation to be 0.
-    """
-    y_rad = y_deg / 180 * np.pi 
-    R = np.eye(4)
-    R[0, 0] =  np.cos(y_rad)
-    R[0, 2] =  np.sin(y_rad)
-    R[2, 0] = -np.sin(y_rad)
-    R[2, 2] =  np.cos(y_rad)
-    return R
+import argparse
 
 
-def viewport_matrix(l=-1, r=1, t=1, b=-1):
-    """
-    viewport matrix: http://glasnost.itcarlow.ie/~powerk/GeneralGraphicsNotes/projection/viewport_transformation.html
-    @param l: left
-    @param r: right
-    @param t: top
-    @param b: bottom
-    """
-    V = np.eye(4)
-    w = r - l
-    h = t - b
-    V[0, 0] = .5 * w
-    V[1, 1] = .5 * h
-    V[2, 2] = .5
-    V[3, 0] = .5 * (r + l)
-    V[3, 1] = .5 * (t + b)
-    V[3, 2] = .5
+NEAR = 300.0
+FAR = 2000.0
+FOVY = 0.5
+CAMERA_T = np.asarray([0.0, 0.0, -400.0])
+
+def normalize(x):
+    return x / x[:, -1].reshape(-1, 1)
+
+def to_homogenous(x):
+    return np.c_[x, np.ones(x.shape[0])]
+
+def from_homogenous(x):
+    return normalize(x)[:, :-1]
+
+def apply_transform(x, M):
+    return from_homogenous(M.dot(to_homogenous(x).T).T)
+
+def construct_V(cx, cy):
+    V = np.asarray([[ cx, 0.0, 0.0,  cx],
+                    [0.0, -cy, 0.0,  cy],
+                    [0.0, 0.0, 0.5, 0.5],
+                    [0.0, 0.0, 0.0, 1.0]])
     return V
 
-def perspective_matrix(t, b, l, r, n, f):
-    """
-    perspective projection matrix: https://bit.ly/300gYmf
-    @param t: top
-    @param b: bottom
-    @param l: left
-    @param r: right
-    @param n: near
-    @param f: far
-    """
-    P = np.zeros((4, 4))
-    w = r - l
-    h = t - b
-    P[0, 0] = 2 * n / w
-    P[1, 1] = 2 * n / h
-    P[2, 0] = (r + l) / w
-    P[2, 1] = (t + b) / h
-    P[2, 2] = -(f + n) / (f - n)
-    P[2, 3] = -1
-    P[3, 2] = -2 * f * n / (f - n)
+def construct_P(near, far, fovy, aspect_ratio):
+    top = np.tan(fovy / 2.0) * near
+    right = top * aspect_ratio
+    left = -right
+    bottom = -top
+    near_2 = 2 * near
+    P = np.zeros([4, 4])
+    P[0, 0] = near_2
+    P[1, 1] = near_2
+    P[2, 3] = -near_2 * far
+    P[:, 2] = [right + left, top + bottom, -(far + near), -1.0]
+    P /= np.asarray([right - left, top - bottom, far - near, 1.0]
+            ).reshape(-1, 1)
     return P
 
+def construct_R(theta_x, theta_y, theta_z):
+    to_rad = lambda theta: theta * np.pi / 180.0
+    theta_x = to_rad(theta_x)
+    theta_y = to_rad(theta_y)
+    theta_z = to_rad(theta_z)
+    sin_x, cos_x = np.sin(theta_x), np.cos(theta_x)
+    sin_y, cos_y = np.sin(theta_y), np.cos(theta_y)
+    sin_z, cos_z = np.sin(theta_z), np.cos(theta_z)
+    R_x = np.asarray([
+        [1, 0, 0],
+        [0, cos_x, -sin_x],
+        [0, sin_x, cos_x]
+    ])
+    R_y = np.asarray([
+        [cos_y, 0, sin_y],
+        [0, 1, 0],
+        [-sin_y, 0, cos_y]
+    ])
+    R_z = np.asarray([
+        [cos_z, -sin_z, 0],
+        [sin_z, cos_z, 0],
+        [0, 0, 1]
+    ])
+    R = np.eye(4)
+    R[:-1, :-1] = R_z.dot(R_y.dot(R_x))
+    return R
 
-def project_points(S, near, R):
-    """project points following equation 2"""
-    P = perspective_matrix(1, -1, 1, -1, near, 100)
-    ones = np.ones((S.shape[0], 1))
-    S = np.append(S, ones, axis=1)
-    V = viewport_matrix()
-    p = V.T @ P.T @ R @ S.T
-    return p.T
+def construct_T(x, y, z):
+    T = np.eye(4)
+    T[:-1, -1] = [x, y, z]
+    return T
 
+def read_vertex_indices(
+        file_name='Landmarks68_model2017-1_face12_nomouth.anl'):
+    with open(file_name, 'r') as f:
+        v_idx = np.asarray([int(idx) for idx in f])
+    return v_idx
 
-(texture, identity, expression, triangles) = load_data()
-# G = reconstruct_face(identity, expression)
-alpha = np.random.uniform(-1.0, 1.0)
-delta = np.random.uniform(-1.0, 1.0)
-G = reconstruct_face(identity, expression, alpha, delta)
-(num_points, _) = G.shape
-# make coordinates homogeneous
-S = np.vstack((G.T, np.ones(num_points)))
+def construct_obj_to_cam(omega, t, resolution=(1.0, 1.0)):
+    aspect_ratio = resolution[0] / float(resolution[1])
+    T = construct_T(*t)
+    R = construct_R(*omega)
+    model_mat = T.dot(R)
+    view_mat = construct_T(*CAMERA_T)
+    projection_mat = construct_P(NEAR, FAR, FOVY, aspect_ratio)
+    viewport_mat = construct_V(resolution[0] / 2.0, resolution[1] / 2.0)
+    M = viewport_mat.dot(projection_mat.dot(view_mat.dot(model_mat)))
+    return M
 
-########################################################################
-# TODO use P and V also when only doing the rotation
-#   should work correctly when dividing by w-coordinate (fourth one)?
-########################################################################
+def main():
 
-fig = plt.figure()
-# Rotate an object 10° and -10° around Oy and visualize result.
-for i, angle in enumerate([-10, 10]):
-    R = rotation_matrix_y(angle)
-    G_ = (R @ S)[:3].T
-    mesh = Mesh(G_, texture.mean, triangles)
-    img = mesh_to_png(mesh)
-    plt.subplot(2, 1, i+1)
-    plt.imshow(img)
-plt.savefig('results/pinhole_camera.png')
+    # load data
+    color, pca_id, pca_exp, tri = load_data()
+    color = color.mean
+    v_idx = read_vertex_indices()
 
-vertex_idxs = load_landmarks()
+    if ARGS.debug:
 
-# visualize facial landmark points on the 2D image plane using Eq. 2
-#plt.close("all")
+        # parameters
+        omega = [0.0, 0.0, 0.0]
+        t = [0.0, 0.0, 0.0]
 
-translation = (0, 0, -200)
-R[3, 0:3] = translation
-points_ = project_points(G_, near=1, R=R)
-projections = []
-originals = []
-for i, pair in enumerate(points_):
-    if i not in vertex_idxs:
-        continue
-    originals.append(G_[i][:2])
-    projections.append(pair[:2])
+        # reproduce debug data
+        geo = pca_id.sample(0.0)
+        im = geo_to_im(geo, color, tri)
+        resolution = tuple(im.shape[:2][::-1])
+        M = construct_obj_to_cam(omega, t, resolution)
+        geo_ = apply_transform(geo, M)
 
-originals = np.array(originals)
-projections = np.array(projections)
+        # load debug images
+        test = plt.imread('debug_images/test.png')
+        debug0000 = plt.imread('debug_images/debug0000.png')
 
-numbers = [str(x) for x in range(len(originals))]
+        # plot results
+        fig, axarr = plt.subplots(1, 3)
 
-fig = plt.figure()
-plt.scatter(projections[:, 0], projections[:, 1])
-for i in range(len(originals)):
-    plt.text(projections[i, 0], projections[i, 1], numbers[i], fontsize=7)
+        axarr[0].set_title('test.png')
+        axarr[0].imshow(test)
 
-plt.scatter(originals[:, 0], originals[:, 1])
-for i in range(len(originals)):
-    plt.text(originals[i, 0], originals[i, 1], numbers[i], fontsize=7)
-plt.show()
+        axarr[1].set_title('debug0000.png')
+        axarr[1].imshow(debug0000)
+
+        axarr[2].set_title('reproduction')
+        axarr[2].imshow(im)
+        axarr[2].scatter(geo_[::20, 0], geo_[::20, 1], s=0.1, c='b')
+        axarr[2].scatter(geo_[v_idx, 0], geo_[v_idx, 1], s=8, c='r')
+        axarr[2].set_xlim([0, resolution[0]])
+        axarr[2].set_ylim([resolution[1], 0])
+
+        plt.tight_layout()
+
+    else:
+
+        # sample geometry
+        geo = pca_id.sample() + pca_exp.sample()
+
+        # determine left and right rotated images
+        R_l = construct_R(0,  10, 0)
+        R_r = construct_R(0, -10, 0)
+        geo_l = apply_transform(geo, R_l)
+        geo_r = apply_transform(geo, R_r)
+
+        # plot rotated images
+        im_l = geo_to_im(geo_l, color, tri)
+        im_r = geo_to_im(geo_r, color, tri)
+        fig, axarr = plt.subplots(1, 2)
+        axarr[0].set_title('10 degree y-rotation')
+        axarr[0].imshow(im_l)
+        axarr[1].set_title('-10 degree y-rotation')
+        axarr[1].imshow(im_r)
+        plt.tight_layout()
+
+        # parameters
+        omega = [0.0, 10.0, 0.0]
+        t = [0.0, 0.0, 0.0]
+
+        # create rotated model
+        geo = pca_id.sample() + pca_exp.sample()
+        M = construct_obj_to_cam(omega, t)
+        geo_ = apply_transform(geo, M)
+
+        # plot landmarks
+        plt.figure()
+        plt.title('10 degree rotation landmarks')
+        plt.scatter(geo_[v_idx, 0], -geo_[v_idx, 1], c='b', s=8)
+        for i in range(len(v_idx)):
+            plt.text(geo_[v_idx[i], 0], -geo_[v_idx[i], 1], i,
+                    fontsize=8)
+        plt.tight_layout()
+
+    plt.show()
+
+    return
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true',
+            help='Run debug example')
+    ARGS = parser.parse_args()
+    main()

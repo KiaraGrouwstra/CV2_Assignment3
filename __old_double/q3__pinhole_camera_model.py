@@ -136,7 +136,7 @@ def main():
     else:
 
         # sample geometry
-        geo = pca_id.sample() + pca_exp.sample()
+        geo = pca_id.sample(0.0)
 
         # determine left and right rotated images
         R_l = construct_R(0,  10, 0)
