@@ -18,6 +18,9 @@ def to_homogenous(x):
 def from_homogenous(x):
     return normalize(x)[:, :-1]
 
+def apply_transform(x, M):
+    return from_homogenous(M.dot(to_homogenous(x).T).T)
+
 def construct_V(cx, cy):
     V = np.asarray([[ cx, 0.0, 0.0,  cx],
                     [0.0, -cy, 0.0,  cy],
@@ -97,21 +100,22 @@ def main():
 
     if ARGS.debug:
 
-        alpha = 0.0
-        delta = 0.0
+        # parameters
         omega = [0.0, 0.0, 0.0]
         t = [0.0, 0.0, 0.0]
-        resolution = (1024, 768)
 
-        geo = pca_id.sample(alpha) + pca_exp.sample(delta)
+        # reproduce debug data
+        geo = pca_id.sample() + pca_exp.sample()
         im = geo_to_im(geo, color, tri)
         resolution = tuple(im.shape[:2][::-1])
         M = construct_obj_to_cam(omega, t, resolution)
-        geo_ = from_homogenous(M.dot(to_homogenous(geo).T).T)
+        geo_ = apply_transform(geo, M)
 
+        # load debug images
         test = plt.imread('test.png')
         debug0000 = plt.imread('debug0000.png')
 
+        # plot results
         fig, axarr = plt.subplots(1, 3)
 
         axarr[0].set_title('test.png')
@@ -119,8 +123,6 @@ def main():
 
         axarr[1].set_title('debug0000.png')
         axarr[1].imshow(debug0000)
-
-        geo = from_homogenous(construct_T(*CAMERA_T).dot(to_homogenous(geo).T).T)
 
         axarr[2].set_title('reproduction')
         axarr[2].imshow(im)
@@ -130,172 +132,45 @@ def main():
         axarr[2].set_ylim([resolution[1], 0])
 
         plt.tight_layout()
-        plt.show()
 
     else:
 
-        pass
+        # sample geometry
+        geo = pca_id.sample() + pca_exp.sample()
 
-    exit(0)
+        # determine left and right rotated images
+        R_l = construct_R(0,  10, 0)
+        R_r = construct_R(0, -10, 0)
+        geo_l = apply_transform(geo, R_l)
+        geo_r = apply_transform(geo, R_r)
 
-#    plot_scene(geo_, color, tri, axarr[1], resolution=test.shape[:2])
-    axarr[2].imshow(test)
-#    axarr[2].scatter((geo_[::10, 0] * 0.5 + 0.5) * IM_WIDTH,
-#            (geo_[::10, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
-#            s=0.1, c='b')
-#    axarr[2].scatter((geo_[v_idx, 0] * 0.5 + 0.5) * IM_WIDTH,
-#            (geo_[v_idx, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
-#            s=5, c='r')
-    axarr[2].scatter(geo_[::10, 0], geo_[::10, 1], s=0.1, c='b')
-    axarr[2].scatter(geo_[v_idx, 0], geo_[v_idx, 1], s=5, c='r')
-    axarr[2].set_xlim([0, IM_WIDTH])
-    axarr[2].set_ylim([IM_HEIGHT, 0])
-    axarr[2].set_title('result')
+        # plot rotated images
+        im_l = geo_to_im(geo_l, color, tri)
+        im_r = geo_to_im(geo_r, color, tri)
+        fig, axarr = plt.subplots(1, 2)
+        axarr[0].set_title('10 degree y-rotation')
+        axarr[0].imshow(im_l)
+        axarr[1].set_title('-10 degree y-rotation')
+        axarr[1].imshow(im_r)
+        plt.tight_layout()
 
+        # parameters
+        omega = [0.0, 10.0, 0.0]
+        t = [0.0, 0.0, 0.0]
 
-    geo = pca_id.sample() + pca_exp.sample()
+        # create rotated model
+        geo = pca_id.sample() + pca_exp.sample()
+        M = construct_obj_to_cam(omega, t)
+        geo_ = apply_transform(geo, M)
 
-
-    geo_h = to_homogenous(geo).T
-
-    T = construct_T(0, 0, -400)
-    model_mat = T.dot(construct_R(0, 0, 0))
-    geo_gl = model_mat.dot(geo_h)
-
-    view_mat = construct_T(0, 0, 0)#(3 * max(geo_gl[2]) - min(geo_gl[2])))
-    geo_gl_ = view_mat.dot(geo_gl)
-
-    geo_gl__ = geo_gl[:, v_idx]
-
-    w = max(geo_h[0]) - min(geo_h[0])
-    h = max(geo_h[1]) - min(geo_h[1])
-
-    print(IM_WIDTH/ IM_HEIGHT)
-    print(w/ h)
-
-#    projection_mat = construct_P(min(geo_gl_[0]), max(geo_gl_[0]),
-#                                 min(geo_gl_[1]), max(geo_gl_[1]),
-#                                               1, max(geo_gl_[2]))
-#    projection_mat = construct_P(-1, 1, -1, 1, 1, 100)
-#    aspect_ratio = w / h
-    aspect_ratio = IM_WIDTH / IM_HEIGHT
-    projection_mat = construct_P2(NEAR, FAR, FOVY, aspect_ratio)
-
-
-#    viewport_mat = construct_V()
-    viewport_mat = construct_V2(IM_WIDTH / 2.0, IM_HEIGHT / 2.0)
-    geo_h_ = viewport_mat.dot(projection_mat.dot(geo_gl_))
-
-    geo_ = from_homogenous(geo_h_.T)
-#    geo_ = geo_h_[:-1].T
-
-    a = geo_.T
-    print(a.shape)
-    print(min(a[0]), max(a[0]))
-    print(min(a[1]), max(a[1]))
-    print(min(a[2]), max(a[2]))
-#    print(min(a[3]), max(a[3]))
-
-    """
-    fig, axarr = plt.subplots(1, 2)
-    plot_scene(from_homogenous(geo_gl.T), color, tri, axarr[0])
-    plot_scene(geo_, color, tri, axarr[1])
-    axarr[0].scatter(geo[v_idx, 0], geo[v_idx, 1])
-    axarr[1].scatter(geo_[v_idx, 0], geo_[v_idx, 1])
-    """
-
-#    geo_ -= geo_.min(0).reshape(1, -1)
-
-    geo__ = from_homogenous(geo_)
-#    geo__[:, 0] -= IM_WIDTH / 2.0
-#    geo__[:, 1] += IM_HEIGHT / 2.0
-
-
-
-    a = geo_.T
-    print(a.shape)
-    print(min(a[0]), max(a[0]))
-    print(min(a[1]), max(a[1]))
-    print(min(a[2]), max(a[2]))
-
-
-#    plot_scene(geo, color, tri, axarr[0], resolution=(IM_WIDTH, IM_HEIGHT))
-#    plt.figure()
-#    plot_scene(geo_, color, tri, resolution=(IM_WIDTH, IM_HEIGHT))
-#    geo[:, 0] -= min(geo[:, 0])
-#    geo[:, 1] -= max(geo[:, 1])
-#    axarr[0].scatter(geo[v_idx, 0], -geo[v_idx, 1])
-#    plt.scatter(geo_[v_idx, 0], -geo_[v_idx, 1])
-
-    fig, axarr = plt.subplots(1, 3)
-    test = plt.imread('test.png')
-    debug0000 = plt.imread('debug0000.png')
-    axarr[0].imshow(test)
-    axarr[0].set_title('test.png')
-    axarr[1].imshow(debug0000)
-    axarr[1].set_title('debug0000.png')
-
-    print(test.shape)
-
-
-#    plot_scene(geo_, color, tri, axarr[1], resolution=test.shape[:2])
-    axarr[2].imshow(test)
-#    axarr[2].scatter((geo_[::10, 0] * 0.5 + 0.5) * IM_WIDTH,
-#            (geo_[::10, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
-#            s=0.1, c='b')
-#    axarr[2].scatter((geo_[v_idx, 0] * 0.5 + 0.5) * IM_WIDTH,
-#            (geo_[v_idx, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
-#            s=5, c='r')
-    axarr[2].scatter(geo_[::10, 0], geo_[::10, 1], s=0.1, c='b')
-    axarr[2].scatter(geo_[v_idx, 0], geo_[v_idx, 1], s=5, c='r')
-    axarr[2].set_xlim([0, IM_WIDTH])
-    axarr[2].set_ylim([IM_HEIGHT, 0])
-    axarr[2].set_title('result')
-
-    plt.show()
-    exit(0)
-
-
-    # determine left and right rotated images
-    geo_h = to_homogenous(geo).T
-    R_left = construct_R(0, 10, 0)
-    R_right = construct_R(0, -10, 0)
-    geo_h_left = R_left.dot(geo_h)
-    geo_h_right = R_right.dot(geo_h)
-    geo_left = from_homogenous(geo_h_left.T)
-    geo_right = from_homogenous(geo_h_right.T)
-
-    # plot rotated images
-    fig, axarr = plt.subplots(1, 2)
-    plot_scene(geo_left, color, tri, axarr[0])
-    plot_scene(geo_right, color, tri, axarr[1])
-
-    # determine complete projected image for left rotation
-    T = construct_T(0, 0, 5 * -(max(geo_h[2]) - min(geo_h[2])))
-    P = construct_P(min(geo_h[0]), max(geo_h[0]),
-                    min(geo_h[1]), max(geo_h[1]),
-                    min(geo_h[2]), max(geo_h[2]))
-    V = construct_V()
-    geo_h_left_projected = V.dot(P.dot(T.dot(geo_h_left)))
-    geo_left_projected = from_homogenous(geo_h_left_projected.T)
-
-
-    geo_left_projected = geo_h_left_projected[:-1].T
-
-
-    # plot projected image
-    plt.figure()
-    plot_scene(geo_left_projected, color, tri)
-
-#    """
-    # plot vertices
-    plt.figure()
-    plt.scatter(geo_left_projected[v_idx, 0],
-            geo_left_projected[v_idx, 1])
-    for i in range(len(v_idx)):
-        plt.text(geo_left_projected[v_idx[i], 0],
-                geo_left_projected[v_idx[i], 1], i, fontsize=7)
-#    """
+        # plot landmarks
+        plt.figure()
+        plt.title('10 degree rotation landmarks')
+        plt.scatter(geo_[v_idx, 0], -geo_[v_idx, 1], c='b', s=8)
+        for i in range(len(v_idx)):
+            plt.text(geo_[v_idx[i], 0], -geo_[v_idx[i], 1], i,
+                    fontsize=8)
+        plt.tight_layout()
 
     plt.show()
 

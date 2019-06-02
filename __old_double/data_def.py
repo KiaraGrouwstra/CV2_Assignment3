@@ -26,4 +26,4 @@ class PCAModel:
     def sample(self, epsilon=None):
         if epsilon == None:
             epsilon = np.random.uniform(-1.0, 1.0)
-        return self.mean + self.pc.dot(epsilon * np.sqrt(self.std))
+        return self.mean + self.pc.dot(epsilon * self.std)
