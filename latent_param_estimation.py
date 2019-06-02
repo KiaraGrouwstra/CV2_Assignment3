@@ -16,9 +16,9 @@ from utils import load_data, load_landmarks, reconstruct_face
 
 CAMERA_T = torch.tensor([0.0, 0.0, -400.0])
 
-# TODO
-# def normalize(x):
-#     return x / x[:, -1].reshape(-1, 1)
+# same as numpy version
+def normalize(x):
+    return x / x[:, -1].reshape(-1, 1)
 
 def to_homogenous(x):
     ones = torch.ones((x.shape[0], 1))

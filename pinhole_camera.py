@@ -9,6 +9,7 @@ FAR = 2000.0
 FOVY = 0.5
 CAMERA_T = np.asarray([0.0, 0.0, -400.0])
 
+# normalize(np.array([[2,3,4]]))
 def normalize(x):
     return x / x[:, -1].reshape(-1, 1)
 
