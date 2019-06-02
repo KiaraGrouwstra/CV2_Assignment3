@@ -141,7 +141,7 @@ def main():
         # plot rotated images
         im_l = geo_to_im(geo_l, color, tri)
         im_r = geo_to_im(geo_r, color, tri)
-        fig, axarr = plt.subplots(1, 2)
+        fig, axarr = plt.subplots(2)
         axarr[0].set_title('10 degree y-rotation')
         axarr[0].imshow(im_l)
         axarr[1].set_title('-10 degree y-rotation')
@@ -151,19 +151,22 @@ def main():
         # parameters
         omega = [0.0, 10.0, 0.0]
         t = [0.0, 0.0, 0.0]
+        resolution = tuple(im_l.shape[:2][::-1])
 
         # create rotated model
-        geo = pca_id.sample() + pca_exp.sample()
-        M = construct_obj_to_cam(omega, t)
+        M = construct_obj_to_cam(omega, t, resolution)
         geo_ = apply_transform(geo, M)
 
         # plot landmarks
-        plt.figure()
-        plt.title('10 degree rotation landmarks')
-        plt.scatter(geo_[v_idx, 0], -geo_[v_idx, 1], c='b', s=8)
+        fig, ax = plt.subplots(1)
+        ax.set_title('10 degree rotation landmarks')
+        ax.scatter(geo_[v_idx, 0], geo_[v_idx, 1], c='b', s=8)
         for i in range(len(v_idx)):
-            plt.text(geo_[v_idx[i], 0], -geo_[v_idx[i], 1], i,
+            ax.text(geo_[v_idx[i], 0], geo_[v_idx[i], 1], i,
                     fontsize=8)
+        ax.axis('equal')
+        ylim = ax.get_ylim()
+        ax.set_ylim(ylim[::-1])
         plt.tight_layout()
 
     plt.show()
