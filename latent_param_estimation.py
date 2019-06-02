@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from data_def import Mesh
 
 from landmarks import file_landmarks, plot_landmarks
 from utils import load_data, load_landmarks, reconstruct_face
@@ -147,7 +148,7 @@ def train_model(model):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     # - Assuming α, δ, ω, t to be latent parameters of your model optimize an Energy described above using Adam optimizer until convergence.
     prev_loss = 0
-    for i in trange(1000):
+    for i in trange(10000):
         optimizer.zero_grad()
         loss = model.forward()
         print(i, loss)
@@ -167,7 +168,7 @@ def estimate_points(files, identity, expression):
     model = Model(landmarks_pics, identity, expression)
     model = train_model(model)
     # print(model)
-    return model.points.detach().numpy()
+    return model
 
 def load_morphace():
     # - Landmarks are a subset of vertices from the morphable model (indexes are defined by the annotation file provided), that's why you are inferring landmarks.
@@ -188,7 +189,9 @@ if __name__ == "__main__":
     files = glob.glob(os.path.join(faces_folder_path, "*.jpg"))
     # landmarks = file_landmarks(f)
     # ground_truths = list(map(file_landmarks, tqdm(files)))
-    landmarks_pics = list(map(lambda f: estimate_points([f], identity, expression).squeeze(), tqdm(files)))
+    models = list(map(lambda f: estimate_points([f], identity, expression), tqdm(files)))
+
+    landmarks_pics = [x.points.detach().numpy().squeeze() for x in models]
 
     # Visualize predicted landmarks overlayed on ground truth.
     for landmarks, fpath in zip(landmarks_pics, files):
@@ -197,3 +200,7 @@ if __name__ == "__main__":
         plot_landmarks([ground_truth, landmarks])
         print('plotted')
         plt.savefig('results/estimation_' + os.path.basename(fpath))
+
+    alpha = models[0].alpha.detach().numpy()
+    delta = models[0].delta.detach().numpy()
+    print(alpha, delta)
