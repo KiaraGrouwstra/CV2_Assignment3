@@ -7,8 +7,8 @@ import numpy as np
 
 def create_test_data(pca_id, pca_exp, color, tri, do_plot=False):
     # parameters
-    alpha = np.random.uniform(-1.0, 1.0)
-    delta = np.random.uniform(-1.0, 1.0)
+    alpha = np.random.uniform(-1.0, 1.0, pca_id.std.shape)
+    delta = np.random.uniform(-1.0, 1.0, pca_exp.std.shape)
     omega = np.asarray([0, 0, 30])
     t = np.asarray([0, 0, 0])
     omega_c = np.asarray([0, 0, 90])
@@ -83,17 +83,17 @@ def main():
     # plot results
     fig, axarr = plt.subplots(1, 3)
 
-    axarr[0].set_title('ground-truth')
+    axarr[0].set_title('Ground-truth')
     axarr[0].imshow(im)
 
-    axarr[1].set_title('model on ground-truth')
+    axarr[1].set_title('Model on ground-truth')
     axarr[1].imshow(im)
     axarr[1].scatter(geo_[::20, 0], geo_[::20, 1], s=0.1, c='b')
     axarr[1].scatter(geo_[v_idx, 0], geo_[v_idx, 1], s=8, c='r')
     axarr[1].set_xlim([0, resolution[0]])
     axarr[1].set_ylim([resolution[1], 0])
 
-    axarr[2].set_title('model')
+    axarr[2].set_title('Textured model')
     axarr[2].imshow(im_)
     axarr[2].set_xlim([0, resolution[0]])
     axarr[2].set_ylim([resolution[1], 0])
