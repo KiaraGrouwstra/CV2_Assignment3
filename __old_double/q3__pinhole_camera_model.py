@@ -165,8 +165,8 @@ def main():
     projection_mat = construct_P2(NEAR, FAR, FOVY, aspect_ratio)
 
 
-    viewport_mat = construct_V()
-#    viewport_mat = construct_V2(IM_WIDTH / 2.0, -IM_HEIGHT / 2.0)
+#    viewport_mat = construct_V()
+    viewport_mat = construct_V2(IM_WIDTH / 2.0, IM_HEIGHT / 2.0)
     geo_h_ = viewport_mat.dot(projection_mat.dot(geo_gl_))
 
     geo_ = from_homogenous(geo_h_.T)
@@ -223,12 +223,14 @@ def main():
 
 #    plot_scene(geo_, color, tri, axarr[1], resolution=test.shape[:2])
     axarr[2].imshow(test)
-    axarr[2].scatter((geo_[::10, 0] * 0.5 + 0.5) * IM_WIDTH,
-            (geo_[::10, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
-            s=0.1, c='b')
-    axarr[2].scatter((geo_[v_idx, 0] * 0.5 + 0.5) * IM_WIDTH,
-            (geo_[v_idx, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
-            s=5, c='r')
+#    axarr[2].scatter((geo_[::10, 0] * 0.5 + 0.5) * IM_WIDTH,
+#            (geo_[::10, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
+#            s=0.1, c='b')
+#    axarr[2].scatter((geo_[v_idx, 0] * 0.5 + 0.5) * IM_WIDTH,
+#            (geo_[v_idx, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
+#            s=5, c='r')
+    axarr[2].scatter(geo_[::10, 0], geo_[::10, 1], s=0.1, c='b')
+    axarr[2].scatter(geo_[v_idx, 0], geo_[v_idx, 1], s=5, c='r')
     axarr[2].set_xlim([0, IM_WIDTH])
     axarr[2].set_ylim([IM_HEIGHT, 0])
     axarr[2].set_title('result')
