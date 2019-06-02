@@ -38,7 +38,7 @@ def detect_landmark(img):
         # Draw the face landmarks on the screen.
         # apparently all landmarks displayed in reverse (over both axes) in our images, so flip them!
         # return shape_to_np(shape)
-        return shape_to_np(shape)
+        return -1* rescale_landmarks(shape_to_np(shape))
 
     return np.array([])
 
@@ -55,6 +55,7 @@ def rescale_landmarks(landmarks):
         difference = landmarks[:, i].max() - landmarks[:, i].min()
         landmarks[:, i] = landmarks[:, i] - landmarks[:, i].mean()
         landmarks[:, i] = landmarks[:, i] / difference
+        landmarks[:, i] = landmarks[:, i] * 150
     return landmarks
 
 def flipper_upper(landmarks):
