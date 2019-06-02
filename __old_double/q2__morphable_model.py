@@ -32,29 +32,29 @@ def load_data(path='model2017-1_face12_nomouth.h5'):
     pca_exp.clip(N_EXP)
     return pca_id, pca_exp, c, tri
 
-def mesh_to_png(mesh, file_name=None, resolution=(1024, 768)):
+def mesh_to_png(mesh, file_name=None, resolution=None):
     mesh = trimesh.base.Trimesh(
         vertices=mesh.vertices,
         faces=mesh.triangles,
         vertex_colors=mesh.colors)
-    png = mesh.scene().save_image(resolution)
+    scene = mesh.scene()
+    if resolution == None:
+        png = scene.save_image()
+    else:
+        png = scene.save_image(resolution=resolution)
     if file_name != None:
         with open(file_name, 'wb') as f:
             f.write(png)
     return png
 
-def png_to_img(png):
+def png_to_im(png):
     return plt.imread(io.BytesIO(png))
 
-def plot_scene(geo, color, tri, ax=None, resolution=(1024, 768)):
+def geo_to_im(geo, color, tri, resolution=None):
     mesh = Mesh(geo, color, tri)
-    img = png_to_img(mesh_to_png(mesh, resolution=resolution))
-    if ax != None:
-        ax.imshow(img)
-        # ax.axis('off')
-    else:
-        plt.imshow(img)
-    return
+    png = mesh_to_png(mesh, resolution=resolution)
+    im = png_to_im(png)
+    return im
 
 def main():
     pca_id, pca_exp, color, tri = load_data()
@@ -62,7 +62,9 @@ def main():
     for r in range(axarr.shape[0]):
         for c in range(axarr.shape[1]):
             geo = pca_id.sample() + pca_exp.sample()
-            plot_scene(geo, color, tri, axarr[r, c])
+            im = geo_to_im(geo, color, tri)
+            axarr[r, c].imshow(im)
+            axarr[r, c].axis('off')
     plt.show()
     return
 

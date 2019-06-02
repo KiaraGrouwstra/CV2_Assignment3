@@ -1,70 +1,35 @@
-from q2__morphable_model import load_data, plot_scene
+from q2__morphable_model import load_data, geo_to_im
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
-
-IM_WIDTH = 1024
-IM_HEIGHT = 768
 
 NEAR = 300.0
 FAR = 2000.0
 FOVY = 0.5
-
-def to_homogenous(x):
-    return np.c_[x, np.ones(x.shape[0])]
+CAMERA_T = np.asarray([0.0, 0.0, -400.0])
 
 def normalize(x):
     return x / x[:, -1].reshape(-1, 1)
 
+def to_homogenous(x):
+    return np.c_[x, np.ones(x.shape[0])]
+
 def from_homogenous(x):
     return normalize(x)[:, :-1]
 
-def construct_V2(cx, cy):
+def construct_V(cx, cy):
     V = np.asarray([[ cx, 0.0, 0.0,  cx],
                     [0.0, -cy, 0.0,  cy],
                     [0.0, 0.0, 0.5, 0.5],
                     [0.0, 0.0, 0.0, 1.0]])
     return V
 
-def construct_P2(near, far, fovy, aspect_ratio):
+def construct_P(near, far, fovy, aspect_ratio):
     top = np.tan(fovy / 2.0) * near
     right = top * aspect_ratio
-    P = construct_P(-right, right, -top, top, near, far)
-#    f_n = f - n
-#    Sy = 1.0 / (np.tan(fovy / 2 * np.pi / 180))
-#    Sx = Sy * width / float(height)
-#    P = np.asarray([[ Sx, 0.0,           0.0,  0.0],
-#                    [0.0,  Sy,           0.0,  0.0],
-#                    [0.0, 0.0,     - f / f_n, -1.0],
-#                    [0.0, 0.0, - f * n / f_n,  0.0]])
-    return P
-
-def construct_V(left=-1, right=1, bottom=-1, top=1):
-    V = np.eye(4)
-    V[0, 0] = right - left
-    V[0,-1] = right + left
-    V[1, 1] = top - bottom
-    V[1,-1] = top + bottom
-    V[-2:, -1] += 1
-    V /= 2.0
-
-    """
-    l, r, b, t, n, f = left, right, bottom, top, 0, 0
-
-    V = np.eye(4)
-    w = r - l
-    h = t - b
-    V[0, 0] = .5 * w
-    V[1, 1] = .5 * h
-    V[2, 2] = .5
-    V[3, 0] = .5 * (r + l)
-    V[3, 1] = .5 * (t + b)
-    V[3, 2] = .5
-    """
-
-    return V
-
-def construct_P(left, right, bottom, top, near, far):
+    left = -right
+    bottom = -top
     near_2 = 2 * near
     P = np.zeros([4, 4])
     P[0, 0] = near_2
@@ -73,22 +38,6 @@ def construct_P(left, right, bottom, top, near, far):
     P[:, 2] = [right + left, top + bottom, -(far + near), -1.0]
     P /= np.asarray([right - left, top - bottom, far - near, 1.0]
             ).reshape(-1, 1)
-
-    """
-    l, r, b, t, n, f = left, right, bottom, top, near, far
-
-    P = np.zeros((4, 4))
-    w = r - l
-    h = t - b
-    P[0, 0] = 2 * n / w
-    P[1, 1] = 2 * n / h
-    P[2, 0] = (r + l) / w
-    P[2, 1] = (t + b) / h
-    P[2, 2] = -(f + n) / (f - n)
-    P[2, 3] = -1
-    P[3, 2] = -2 * f * n / (f - n)
-    """
-
     return P
 
 def construct_R(theta_x, theta_y, theta_z):
@@ -129,13 +78,81 @@ def read_vertex_indices(
         v_idx = np.asarray([int(idx) for idx in f])
     return v_idx
 
+def construct_obj_to_cam(omega, t, resolution=(1.0, 1.0)):
+    aspect_ratio = resolution[0] / float(resolution[1])
+    T = construct_T(*t)
+    R = construct_R(*omega)
+    model_mat = T.dot(R)
+    view_mat = construct_T(*CAMERA_T)
+    projection_mat = construct_P(NEAR, FAR, FOVY, aspect_ratio)
+    viewport_mat = construct_V(resolution[0] / 2.0, resolution[1] / 2.0)
+    M = viewport_mat.dot(projection_mat.dot(view_mat.dot(model_mat)))
+    return M
+
 def main():
 
-    # load vertex indices
+    # load data
+    pca_id, pca_exp, color, tri = load_data()
     v_idx = read_vertex_indices()
 
-    # load data and create face sample
-    pca_id, pca_exp, color, tri = load_data()
+    if ARGS.debug:
+
+        alpha = 0.0
+        delta = 0.0
+        omega = [0.0, 0.0, 0.0]
+        t = [0.0, 0.0, 0.0]
+        resolution = (1024, 768)
+
+        geo = pca_id.sample(alpha) + pca_exp.sample(delta)
+        im = geo_to_im(geo, color, tri)
+        resolution = tuple(im.shape[:2][::-1])
+        M = construct_obj_to_cam(omega, t, resolution)
+        geo_ = from_homogenous(M.dot(to_homogenous(geo).T).T)
+
+        test = plt.imread('test.png')
+        debug0000 = plt.imread('debug0000.png')
+
+        fig, axarr = plt.subplots(1, 3)
+
+        axarr[0].set_title('test.png')
+        axarr[0].imshow(test)
+
+        axarr[1].set_title('debug0000.png')
+        axarr[1].imshow(debug0000)
+
+        geo = from_homogenous(construct_T(*CAMERA_T).dot(to_homogenous(geo).T).T)
+
+        axarr[2].set_title('reproduction')
+        axarr[2].imshow(im)
+        axarr[2].scatter(geo_[::20, 0], geo_[::20, 1], s=0.1, c='b')
+        axarr[2].scatter(geo_[v_idx, 0], geo_[v_idx, 1], s=8, c='r')
+        axarr[2].set_xlim([0, resolution[0]])
+        axarr[2].set_ylim([resolution[1], 0])
+
+        plt.tight_layout()
+        plt.show()
+
+    else:
+
+        pass
+
+    exit(0)
+
+#    plot_scene(geo_, color, tri, axarr[1], resolution=test.shape[:2])
+    axarr[2].imshow(test)
+#    axarr[2].scatter((geo_[::10, 0] * 0.5 + 0.5) * IM_WIDTH,
+#            (geo_[::10, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
+#            s=0.1, c='b')
+#    axarr[2].scatter((geo_[v_idx, 0] * 0.5 + 0.5) * IM_WIDTH,
+#            (geo_[v_idx, 1] * 0.5 + 0.5) * -IM_HEIGHT + IM_HEIGHT,
+#            s=5, c='r')
+    axarr[2].scatter(geo_[::10, 0], geo_[::10, 1], s=0.1, c='b')
+    axarr[2].scatter(geo_[v_idx, 0], geo_[v_idx, 1], s=5, c='r')
+    axarr[2].set_xlim([0, IM_WIDTH])
+    axarr[2].set_ylim([IM_HEIGHT, 0])
+    axarr[2].set_title('result')
+
+
     geo = pca_id.sample() + pca_exp.sample()
 
 
@@ -285,4 +302,8 @@ def main():
     return
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true',
+            help='Run debug example')
+    ARGS = parser.parse_args()
     main()
