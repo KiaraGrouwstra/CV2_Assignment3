@@ -83,11 +83,10 @@ def construct_V(cx, cy):
 #     R[:-1, :-1] = R_z.dot(R_y.dot(R_x))
 #     return R
 
-# TODO
-# def construct_T(x, y, z):
-#     T = np.eye(4)
-#     T[:-1, -1] = [x, y, z]
-#     return T
+def construct_T(x, y, z):
+    T = torch.eye(4)
+    T = torch.cat((T[:,:-1], to_homogenous(torch.tensor([[x, y, z]])).t()), dim=1)
+    return T
 
 # TODO
 # def construct_obj_to_cam(omega, t, resolution=(1.0, 1.0)):
