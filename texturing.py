@@ -41,7 +41,7 @@ def bilinear_interpolation(x, y, im):
         x = x.reshape(-1, 1)
     if len(y.shape) == 1:
         y = y.reshape(-1, 1)
-    f = lambda y, x: im[y, x].reshape(-1, 3)
+    f = lambda x, y: im[y, x].reshape(-1, 3)
     x1 = np.floor(x).astype(int)
     x2 = np.ceil(x).astype(int)
     y1 = np.floor(y).astype(int)
@@ -50,8 +50,8 @@ def bilinear_interpolation(x, y, im):
     ydiff = y2 - y1
     xx1 = (x2 - x) / xdiff
     xx2 = (x - x1) / xdiff
-    color = (y2 - y) / ydiff * (xx1 * f(y1, x1) + xx2 * f(y2, x1)) \
-            + (y - y1) / ydiff * (xx1 * f(y1, x2) + xx2 * f(y2, x2))
+    color = (y2 - y) / ydiff * (xx1 * f(x1, y1) + xx2 * f(x2, y1)) \
+            + (y - y1) / ydiff * (xx1 * f(x1, y2) + xx2 * f(x2, y2))
     return color
 
 def determine_texture(geo, im):
