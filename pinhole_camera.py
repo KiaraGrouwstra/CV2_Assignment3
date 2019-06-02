@@ -1,4 +1,4 @@
-from utils import load_data, geo_to_im
+from utils import load_data, load_landmarks, geo_to_im
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
@@ -75,12 +75,6 @@ def construct_T(x, y, z):
     T[:-1, -1] = [x, y, z]
     return T
 
-def read_vertex_indices(
-        file_name='Landmarks68_model2017-1_face12_nomouth.anl'):
-    with open(file_name, 'r') as f:
-        v_idx = np.asarray([int(idx) for idx in f])
-    return v_idx
-
 def construct_obj_to_cam(omega, t, resolution=(1.0, 1.0)):
     aspect_ratio = resolution[0] / float(resolution[1])
     T = construct_T(*t)
@@ -97,7 +91,7 @@ def main():
     # load data
     color, pca_id, pca_exp, tri = load_data()
     color = color.mean
-    v_idx = read_vertex_indices()
+    v_idx = load_landmarks()
 
     if ARGS.debug:
 
