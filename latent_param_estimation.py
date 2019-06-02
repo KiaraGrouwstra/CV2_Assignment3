@@ -32,21 +32,20 @@ def construct_V(cx, cy):
                     [0.0, 0.0, 0.0, 1.0]])
     return V
 
-# TODO
-# def construct_P(near, far, fovy, aspect_ratio):
-#     top = np.tan(fovy / 2.0) * near
-#     right = top * aspect_ratio
-#     left = -right
-#     bottom = -top
-#     near_2 = 2 * near
-#     P = np.zeros([4, 4])
-#     P[0, 0] = near_2
-#     P[1, 1] = near_2
-#     P[2, 3] = -near_2 * far
-#     P[:, 2] = [right + left, top + bottom, -(far + near), -1.0]
-#     P /= np.asarray([right - left, top - bottom, far - near, 1.0]
-#             ).reshape(-1, 1)
-#     return P
+def construct_P(near, far, fovy, aspect_ratio):
+    top = torch.tan(fovy / 2.0) * near
+    right = top * aspect_ratio
+    left = -right
+    bottom = -top
+    near_2 = 2 * near
+    P = torch.tensor([
+        [near_2, 0.0, right + left, 0.0],
+        [0.0, near_2, top + bottom, 0.0],
+        [0.0, 0.0, -(far + near), -near_2 * far],
+        [0.0, 0.0, -1.0, 0.0],
+    ])
+    P /= torch.tensor([right - left, top - bottom, far - near, 1.0]).reshape(-1, 1)
+    return P
 
 # TODO
 # def construct_R(theta_x, theta_y, theta_z):
