@@ -66,6 +66,8 @@ def plot_landmarks(data):
         data[i] = rescale_landmarks(data[i])
         # data[i] = flipper_upper(data[i])
         plt.scatter(data[i][:, 0], data[i][:, 1])
+        for j in range(len(data[i])):
+            plt.text(data[i][j, 0], data[i][j, 1], j)
     plt.show()
 
 def files_landmarks():
